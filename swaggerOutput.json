@@ -1,0 +1,294 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API para o projeto de estágio Barbearia",
+    "description": "Documentação da API para o sistema do Barber Uematsu",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Servidor Local"
+    }
+  ],
+  "paths": {
+    "/usuario/": {
+      "get": {
+        "tags": [
+          "Usuário"
+        ],
+        "summary": "Listar todos os usuários",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Usuário"
+        ],
+        "summary": "Cadastra um novo usuário",
+        "description": "",
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/usuario"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/autenticacao/usuario": {
+      "get": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Obtem as informações do usuário através da cookie",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/autenticacao/token": {
+      "post": {
+        "tags": [
+          "Autenticação"
+        ],
+        "summary": "Gera um token de acesso através das credenciais de um usuário",
+        "description": "",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "example": "any"
+                  },
+                  "senha": {
+                    "example": "any"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servicos/": {
+      "get": {
+        "tags": [
+          "Servicos"
+        ],
+        "summary": "Lista todos os Serviços",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Servicos"
+        ],
+        "summary": "Cadastra um novo Serviço",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nome": {
+                    "example": "any"
+                  },
+                  "descricao": {
+                    "example": "any"
+                  },
+                  "valor": {
+                    "example": "any"
+                  },
+                  "tempoEstimadoMinutos": {
+                    "example": "any"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "usuario": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "example": "Douglas"
+          },
+          "email": {
+            "type": "string",
+            "example": "douglas@email.com"
+          },
+          "senha": {
+            "type": "string",
+            "example": "SenhaForte123!"
+          },
+          "telefone": {
+            "type": "string",
+            "example": "(18) 98765-4321"
+          }
+        },
+        "required": [
+          "nome",
+          "email",
+          "senha",
+          "telefone"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+import express from 'express';
+import swaggerUi from 'swagger-ui-express';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import { createRequire } from 'module';
+
+import authRoute from './routes/authRoute.js';
+import usuarioRoute from './routes/usuarioRoute.js';
+import servicosRoute from './routes/servicosRoute.js';
+
+const require = createRequire(import.meta.url);
+const outputJson = require("./swaggerOutput.json");
+const server = express();
+
+server.use(cors({credentials: true, origin: "http://localhost:3000"}));
+server.use(express.json());
+server.use(cookieParser());
+
+server.use("/docs", swaggerUi.serve, swaggerUi.setup(outputJson));
+
+server.use("/usuario", usuarioRoute);
+server.use("/autenticacao", authRoute);
+server.use("/servicos", servicosRoute);
+
+server.listen(5000, function() {
+    console.log("backend em funcionamento na porta 5000!");
+});

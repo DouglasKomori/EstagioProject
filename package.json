@@ -1,0 +1,33 @@
+{
+  "name": "estagio",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DouglasKomori/EstagioProject.git"
+  },
+  "author": "Douglas Komori",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DouglasKomori/EstagioProject/issues"
+  },
+  "homepage": "https://github.com/DouglasKomori/EstagioProject#readme",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.0",
+    "mysql2": "^3.18.2",
+    "react-hot-toast": "^2.6.0",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "swagger-autogen": "^2.23.7"
+  }
+}
