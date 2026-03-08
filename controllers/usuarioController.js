@@ -25,33 +25,27 @@ export default class UsuarioController {
 
 async cadastrar(req, res) {
     try {
-        // 1. Extrai os dados diretamente do corpo da requisição de forma limpa
         const { nome, email, senha, telefone } = req.body;
 
-        // 2. Validação simples: verifica se os campos obrigatórios vieram vazios ou nulos
         if (!nome || !email || !senha) {
             return res.status(400).json({ erro: "Os campos nome, email e senha são obrigatórios." });
         }
 
-        // 3. Verifica se o email já está cadastrado
         const usuarios = await this.#repository.listar();
         const emailJaExiste = usuarios.some(u => u.email === email);
         if (emailJaExiste) {
             return res.status(400).json({ erro: "Este email já está cadastrado." });
         }
 
-        // 4. Hash simples da senha (mantive o seu crypto para não quebrar seu código)
-        const crypto = await import('crypto'); // Garantindo o import caso não esteja no topo do arquivo
+        const crypto = await import('crypto'); 
         const senhaHash = crypto.createHash('sha256').update(senha).digest('hex');
 
-        // 5. Monta o objeto do usuário
         const usuario = new Usuario();
         usuario.nome = nome;
         usuario.email = email;
         usuario.senha = senhaHash;
-        usuario.telefone = telefone || null; // Se não mandar telefone, salva como nulo
+        usuario.telefone = telefone || null; 
 
-        // 6. Envia para o repositório salvar no banco
         const resultado = await this.#repository.cadastrar(usuario);
         
         if (resultado) {

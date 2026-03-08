@@ -23,7 +23,6 @@ export default class UsuarioRepository {
     }
 
         async buscarPorId(id) {
-        //criação do comando sql;
         const sql = "select * from cliente where id = ?";
         const params = [id];
         

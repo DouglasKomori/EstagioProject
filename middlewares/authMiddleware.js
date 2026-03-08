@@ -15,21 +15,19 @@ export default class AuthMiddleware {
         }, 
         SECRET, 
         {
-            expiresIn: '8h' // Alterado para string '8h' (8 horas). Pode usar '1d' para 1 dia.
+            expiresIn: '8h' 
         });
 
         return jsonWebToken;
     }
 
     async validarToken(req, res, next) {
-        // 1. Tenta pegar o token do Header (Swagger/React) ou dos Cookies
         const authHeader = req.headers.authorization;
         const cookieToken = req.cookies ? req.cookies.token : null;
 
         let token = null;
 
         if (authHeader && authHeader.startsWith('Bearer ')) {
-            // O Header vem como "Bearer eyJhbGciOi...", então separamos pelo espaço e pegamos a parte 2
             token = authHeader.split(' ')[1]; 
         } else if (cookieToken) {
             token = cookieToken;
@@ -37,16 +35,14 @@ export default class AuthMiddleware {
 
         if(token) {
             try {
-                // validar o token e recupera as informações do usuário
                 let payload = jwt.verify(token, SECRET);
                 let usuarioRepository = new UsuarioRepository();
                 
-                // valida o nosso usuário no banco de dados
                 let usuario = await usuarioRepository.buscarPorId(payload.id);
                 
                 if(usuario) {
                     if(usuario.ativo) {
-                        req.usuarioLogado = usuario; // Tudo certo, passa os dados pra frente
+                        req.usuarioLogado = usuario; 
                         next();
                     }
                     else {
