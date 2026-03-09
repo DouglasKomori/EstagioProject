@@ -23,7 +23,7 @@ export default class UsuarioController {
         }
     }
 
-async cadastrar(req, res) {
+    async cadastrar(req, res) {
     try {
         const { nome, email, senha, telefone } = req.body;
 
@@ -59,4 +59,57 @@ async cadastrar(req, res) {
         return res.status(500).json({ erro: "Erro interno no servidor ao cadastrar o usuário." });
     }
 }
+
+    async alterar(req,res){
+        try{
+            let id = req.params.id;
+            let {nome, email, senha, telefone} = req.body;
+
+            if(!id || !nome || !email || !senha){
+                return res.status(400).json({msg: "Informe id, nome, email e senha para alterar um usuário!"});
+            }
+            const crypto = await import('crypto');
+            const senhaHash = crypto.createHash('sha256').update(senha).digest('hex');
+
+            let usuario = new Usuario();
+            usuario.id = id;
+            usuario.nome = nome;
+            usuario.email = email;
+            usuario.senha = senhaHash;
+            usuario.telefone = telefone;
+
+            const resultado = await this.#repository.alterar(usuario);
+            if(resultado){
+                return res.status(200).json({msg: "Usuário alterado com sucesso!"});
+            }
+            else{
+                return res.status(400).json({msg: "Não foi possível alterar o usuário!"});
+            }
+        }
+        catch(exception){
+            console.log(exception);
+            res.status(500).json({ erro: "Erro ao alterar o usuário!" });
+        }
+    }
+
+    async excluir(req, res) {
+        try {
+            let id = req.params.id;
+
+            if (!id) {
+                return res.status(400).json({ msg: "Informe o ID para inativar o utilizador!" });
+            }
+
+            const resultado = await this.#repository.excluir(id);
+            
+            if (resultado) {
+                return res.status(200).json({ msg: "Utilizador inativado com sucesso!" });
+            } else {
+                return res.status(400).json({ msg: "Não foi possível inativar o utilizador!" });
+            }
+        } catch (exception) {
+            console.log(exception);
+            return res.status(500).json({ erro: "Erro ao inativar o utilizador!" });
+        }
+    }
 }

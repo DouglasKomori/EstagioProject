@@ -8,6 +8,7 @@ export default class Usuario extends Base {
     #senha;
     #telefone;
     #ativo;
+    #perfil;
 
     get id(){
         return this.#id;
@@ -49,6 +50,14 @@ export default class Usuario extends Base {
         this.#ativo = value;
     }
 
+    get perfil(){
+        return this.#perfil;
+    }
+
+    set perfil(value){
+        this.#perfil = value;
+    }
+
     constructor(){
         super();
         this.#id = 0;
@@ -57,5 +66,6 @@ export default class Usuario extends Base {
         this.#senha = "";
         this.#telefone = "";
         this.#ativo = true;
+        this.#perfil = "CLIENTE";
     }
 }

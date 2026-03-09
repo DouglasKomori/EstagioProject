@@ -33,4 +33,18 @@ export default class ServicosRepository {
         let result = await this.#banco.ExecutaComandoNonQuery(sql, params);
         return result;
     }
+
+    async alterar(servico){
+        let sql = "update servico set nome = ?, descricao = ?, valor = ?, tempoEstimadoMinutos = ? where id = ?";
+        let params = [servico.nome, servico.descricao, servico.valor, servico.tempoEstimadoMinutos, servico.id];
+        let result = await this.#banco.ExecutaComandoNonQuery(sql, params);
+        return result;
+    }
+
+    async excluir(id){
+        let sql = "update servico set excluido = 1 where id = ?";
+        let params = [id];
+        let result = await this.#banco.ExecutaComandoNonQuery(sql, params);
+        return result;
+    }
 }

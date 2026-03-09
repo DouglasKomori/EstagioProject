@@ -6,17 +6,15 @@ const router = express.Router();
 let ctrl = new UsuarioController();
 let auth = new AuthMiddleware();
 
-router.get("/", auth.validarToken, (req, res) => {
+router.get("/", auth.validarAdmin, (req, res) => {
     //comentarios do swagger
-    // #swagger.tags = ['Usuário']
+    // #swagger.tags = ['Usuário - ADMIN']
     // #swagger.summary = 'Listar todos os usuários'
 
     /* #swagger.security = [{
         "bearerAuth": []
     }]
     */
-
-
     ctrl.listar(req, res)
 });
 router.post("/",  (req, res) => {
@@ -38,6 +36,24 @@ router.post("/",  (req, res) => {
     }
     */
     ctrl.cadastrar(req, res);
+});
+
+router.put("/:id", auth.validarAdmin, (req,res) => {
+    /* #swagger.security = [{
+    "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Usuário - ADMIN']
+    // #swagger.summary = "Altera um Usuário"
+    ctrl.alterar(req,res);
+});
+
+router.delete("/:id", auth.validarAdmin, (req, res) => {
+    /* #swagger.security = [{
+        "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Usuário - ADMIN']
+    // #swagger.summary = "Inativa um Usuário (Exclusão Lógica)"
+    ctrl.excluir(req, res);
 });
 
 export default router;

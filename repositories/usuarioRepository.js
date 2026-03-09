@@ -57,6 +57,23 @@ export default class UsuarioRepository {
         return result;
     }
 
+async alterar(usuario){
+        const sql = "update cliente set nome = ?, email = ?, senha = ?, telefone = ? where id = ?";
+        const params = [usuario.nome, usuario.email, usuario.senha, usuario.telefone, parseInt(usuario.id)];
+        
+        console.log("Parâmetros do SQL:", params);
+
+        const result = await this.#banco.ExecutaComandoNonQuery(sql, params);
+        return result;
+    }
+
+    async excluir(id) {
+        const sql = "update cliente set ativo = 0 where id = ?";
+        const params = [parseInt(id)]; 
+        const result = await this.#banco.ExecutaComandoNonQuery(sql, params);
+        return result;
+    }
+
     toMap(row){
         let usuario = new Usuario();
         usuario.id = row["id"];
@@ -65,6 +82,7 @@ export default class UsuarioRepository {
         usuario.senha = row["senha"];
         usuario.telefone = row["telefone"];
         usuario.ativo = row["ativo"] === undefined ? true : (row["ativo"] === 1 || row["ativo"] === true);
+        usuario.perfil = row["perfil"] || "CLIENTE";
         return usuario;
     }
 }
