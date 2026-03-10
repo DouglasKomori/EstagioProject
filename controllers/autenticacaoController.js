@@ -1,8 +1,6 @@
 import AuthMiddleware from "../middlewares/authMiddleware.js";
 import UsuarioRepository from "../repositories/usuarioRepository.js";
 
-
-
 export default class AutenticacaoController {
 
     #usuarioRepository;
@@ -12,7 +10,7 @@ export default class AutenticacaoController {
     }
 
     async usuario(req, res) {
-        try{
+        try {
             if(req.usuarioLogado)
                 return res.status(200).json(req.usuarioLogado);
             else
@@ -20,28 +18,41 @@ export default class AutenticacaoController {
         }
         catch(ex) {
             console.log(ex);
-            return res.status(500).json({msg: "Erro ao gerar token de acesso"})
+            return res.status(500).json({msg: "Erro ao buscar o usuário logado"})
         }
     }
 
     async token(req, res) {
-
-        try{
+        try {
             let {email, senha} = req.body;
+            
             if(email && senha) {
-                //chama o repository para encontrar usuario com email e senha
-                let usuario = await this.#usuarioRepository.validarAcesso(email, senha);
+                // Converte a senha digitada no Swagger para Hash ANTES de ir pro banco
+                const crypto = await import('crypto');
+                const senhaHash = crypto.createHash('sha256').update(senha).digest('hex');
+
+                //Chama o repository passando o email e a senha já criptografada
+                let usuario = await this.#usuarioRepository.validarAcesso(email, senhaHash);
+                
                 if(usuario) {
-                    //gerar token;
                     let auth = new AuthMiddleware();
-                    let token = auth.gerarToken(usuario.id, usuario.email, usuario.nome);
+                    
+                    let token = auth.gerarToken(
+                        usuario.id, 
+                        usuario.email, 
+                        usuario.nome, 
+                        usuario.telefone, 
+                        usuario.perfil
+                    );
+                    
                     res.cookie("token", token, {
                         httpOnly: true,
                     })
+                    
                     return res.status(200).json({token: token, usuario: usuario});
                 }
                 else {
-                    return res.status(404).json({msg: "Usuário não encontrado"});
+                    return res.status(404).json({msg: "Email ou senha incorretos."});
                 }
             }
             else {
@@ -53,5 +64,4 @@ export default class AutenticacaoController {
             return res.status(500).json({msg: "Erro ao gerar token de acesso"})
         }
     }
-
 }

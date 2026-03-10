@@ -10,7 +10,7 @@ export default class UsuarioRepository {
 
     async validarAcesso(email, senha) {
 
-    const sql = "select * from cliente where email = ? and senha = ?";
+    const sql = "select * from cliente where email = ? and senha = ? and ativo = 1";
     const valores = [email, senha];
 
     const row = await this.#banco.ExecutaComando(sql, valores);
