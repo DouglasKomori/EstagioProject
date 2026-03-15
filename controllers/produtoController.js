@@ -1,6 +1,5 @@
 import produtoRepository from "../repositories/produtoRepository.js";
 
-
 export default class ProdutoController {
     #repoProdutos;
 
@@ -26,11 +25,13 @@ export default class ProdutoController {
 
     async cadastrar(req, res){
         try{
-            let {nome, descricao, precoCusto, precoVenda, quantidadeEstoque} = req.body;
-            if(!nome || !descricao || !precoCusto || !precoVenda || !quantidadeEstoque){
-                return res.status(400).json({msg: "Informe nome, descrição, preço de custo, preço de venda e quantidade em estoque para cadastrar um produto!"});
+            let {nome, descricao, precoCusto, precoVenda, quantidadeEstoque, marcaId} = req.body;
+            
+            if(!nome || !descricao || !precoCusto || !precoVenda || !quantidadeEstoque || !marcaId){
+                return res.status(400).json({msg: "Informe nome, descrição, preço de custo, preço de venda, quantidade em estoque e a marca para cadastrar um produto!"});
             }
-            const result = await this.#repoProdutos.cadastrar({nome, descricao, precoCusto, precoVenda, quantidadeEstoque});
+            
+            const result = await this.#repoProdutos.cadastrar({nome, descricao, precoCusto, precoVenda, quantidadeEstoque, marcaId});
             if(result){
                 return res.status(201).json({msg: "Produto cadastrado com sucesso!"});
             }
@@ -47,11 +48,14 @@ export default class ProdutoController {
     async alterar(req, res){
         try{
             let id = req.params.id;
-            let {nome, descricao, precoCusto, precoVenda, quantidadeEstoque} = req.body;
-            if(!id || !nome || !descricao || !precoCusto || !precoVenda || !quantidadeEstoque){
-                return res.status(400).json({msg: "Informe id, nome, descrição, preço de custo, preço de venda e quantidade em estoque para alterar um produto!"});
+            
+            let {nome, descricao, precoCusto, precoVenda, quantidadeEstoque, marcaId} = req.body;
+            
+            if(!id || !nome || !descricao || !precoCusto || !precoVenda || !quantidadeEstoque || !marcaId){
+                return res.status(400).json({msg: "Informe id, nome, descrição, preço de custo, preço de venda, quantidade em estoque e a marca para alterar um produto!"});
             }
-            const result = await this.#repoProdutos.alterar({id, nome, descricao, precoCusto, precoVenda, quantidadeEstoque});
+
+            const result = await this.#repoProdutos.alterar({id, nome, descricao, precoCusto, precoVenda, quantidadeEstoque, marcaId});
             if(result){
                 return res.status(200).json({msg: "Produto alterado com sucesso!"});
             }
@@ -84,4 +88,4 @@ export default class ProdutoController {
             return res.status(500).json({msg: "Erro ao excluir o produto!"});
         }
     }
-} 
+}

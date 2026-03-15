@@ -600,6 +600,9 @@
                   },
                   "quantidadeEstoque": {
                     "example": "any"
+                  },
+                  "marcaId": {
+                    "example": "any"
                   }
                 }
               }
@@ -676,6 +679,9 @@
                     "example": "any"
                   },
                   "quantidadeEstoque": {
+                    "example": "any"
+                  },
+                  "marcaId": {
                     "example": "any"
                   }
                 }

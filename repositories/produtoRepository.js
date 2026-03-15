@@ -22,6 +22,7 @@ export default class produtoRepository {
             p.precoCusto = row.precoCusto;
             p.precoVenda = row.precoVenda;
             p.quantidadeEstoque = row.quantidadeEstoque;
+            p.marcaId = row.marcaId; 
             p.ativo = row.ativo;
             lista.push(p);
         }
@@ -29,15 +30,17 @@ export default class produtoRepository {
     }
 
     async cadastrar(produto){
-        let sql = "insert into produto (nome, descricao, precoCusto, precoVenda, quantidadeEstoque, ativo) values (?, ?, ?, ?, ?, 1)";
-        let params = [produto.nome, produto.descricao, produto.precoCusto, produto.precoVenda, produto.quantidadeEstoque];
+        let sql = "insert into produto (nome, descricao, precoCusto, precoVenda, quantidadeEstoque, marcaId, ativo) values (?, ?, ?, ?, ?, ?, 1)";
+        
+        let params = [produto.nome, produto.descricao, produto.precoCusto, produto.precoVenda, produto.quantidadeEstoque, produto.marcaId];
         let result = await this.#banco.ExecutaComandoNonQuery(sql, params);
         return result;
     }
 
     async alterar(produto){
-        let sql = "update produto set nome = ?, descricao = ?, precoCusto = ?, precoVenda = ?, quantidadeEstoque = ? where id = ?";
-        let params = [produto.nome, produto.descricao, produto.precoCusto, produto.precoVenda, produto.quantidadeEstoque, produto.id];
+        let sql = "update produto set nome = ?, descricao = ?, precoCusto = ?, precoVenda = ?, quantidadeEstoque = ?, marcaId = ? where id = ?";
+        
+        let params = [produto.nome, produto.descricao, produto.precoCusto, produto.precoVenda, produto.quantidadeEstoque, produto.marcaId, produto.id];
         let result = await this.#banco.ExecutaComandoNonQuery(sql, params);
         return result;
     }
