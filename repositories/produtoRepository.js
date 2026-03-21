@@ -22,7 +22,7 @@ export default class produtoRepository {
             p.precoCusto = row.precoCusto;
             p.precoVenda = row.precoVenda;
             p.quantidadeEstoque = row.quantidadeEstoque;
-            p.marcaId = row.marcaId; 
+            p.marcaId = row.marcaId;
             p.ativo = row.ativo;
             lista.push(p);
         }
@@ -51,4 +51,24 @@ export default class produtoRepository {
         let result = await this.#banco.ExecutaComandoNonQuery(sql, params);
         return result;
     }
+
+    async consultarPorId(id){
+        let sql = "select * from produto where id = ? and ativo = 1";
+        let params = [id];
+        let rows = await this.#banco.ExecutaComando(sql, params);
+        if(rows.length > 0){
+            let row = rows[0];
+            let p = new produto();
+            p.id = row.id;
+            p.nome = row.nome;
+            p.descricao = row.descricao;
+            p.precoCusto = row.precoCusto;
+            p.precoVenda = row.precoVenda;
+            p.quantidadeEstoque = row.quantidadeEstoque;
+            p.marcaId = row.marcaId; 
+            return p;
+        }
+        return null;
+    }
+
 }

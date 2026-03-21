@@ -7,6 +7,7 @@ export default class produto extends Base {
     #precoCusto;
     #precoVenda;
     #quantidadeEstoque;
+    #marcaId;
     #ativo;
 
     get id() {
@@ -45,6 +46,12 @@ export default class produto extends Base {
     set quantidadeEstoque(value) {
         this.#quantidadeEstoque = value;
     }
+    get marcaId() {
+        return this.#marcaId;
+    }
+    set marcaId(value) {
+        this.#marcaId = value;
+    }
     get ativo() {
         return this.#ativo;
     }
@@ -60,6 +67,7 @@ export default class produto extends Base {
         this.#precoCusto = 0;
         this.#precoVenda = 0;
         this.#quantidadeEstoque = 0;
+        this.#marcaId = 0;
         this.#ativo = true;
     }
 }

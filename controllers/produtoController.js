@@ -88,4 +88,24 @@ export default class ProdutoController {
             return res.status(500).json({msg: "Erro ao excluir o produto!"});
         }
     }
+
+    async consultarPorId(req, res){
+        try{
+            let id = req.params.id;
+            if(!id){
+                return res.status(400).json({msg: "Informe o id para consultar um produto!"});
+            }
+            const result = await this.#repoProdutos.consultarPorId(id);
+            if(result){
+                return res.status(200).json(result);
+            }
+            else{
+                return res.status(404).json({msg: "Produto não encontrado!"});
+            }
+        }
+        catch(exception){
+            console.log(exception);
+            return res.status(500).json({msg: "Erro ao consultar o produto!"});
+        }
+    }
 }

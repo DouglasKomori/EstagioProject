@@ -47,4 +47,22 @@ export default class ServicosRepository {
         let result = await this.#banco.ExecutaComandoNonQuery(sql, params);
         return result;
     }
+
+    async consultarPorId(id){
+        let sql = "select * from servico where id = ? and excluido = 0";
+        let params = [id];
+        let rows = await this.#banco.ExecutaComando(sql, params);
+        if(rows.length > 0){
+            let row = rows[0];
+            let s = new Servicos();
+            s.id = row["id"];
+            s.nome = row["nome"];
+            s.descricao = row["descricao"];
+            s.valor = row["valor"];
+            s.tempoEstimadoMinutos = row["tempoEstimadoMinutos"];
+            s.excluido = row["excluido"];
+            return s;
+        }
+        return null;
+    }
 }

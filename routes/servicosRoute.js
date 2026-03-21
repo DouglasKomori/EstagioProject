@@ -15,31 +15,40 @@ router.get("/", auth.validarToken, (req,res) => {
     ctrl.listar(req,res);
 });
 
-router.post("/", auth.validarAdmin, (req,res) => {
+router.post("/", auth.validarFuncionario, (req,res) => {
     /* #swagger.security = [{
     "bearerAuth": []
     }] */
-    // #swagger.tags = ['Servicos - ADMIN']
+    // #swagger.tags = ['Servicos - FUNCIONARIO']
     // #swagger.summary = "Cadastra um novo Serviço"
     ctrl.cadastrar(req,res);
 });
 
-router.put("/:id", auth.validarAdmin, (req,res) => {
+router.put("/:id", auth.validarFuncionario, (req,res) => {
     /* #swagger.security = [{
     "bearerAuth": []
     }] */
-    // #swagger.tags = ['Servicos - ADMIN']
+    // #swagger.tags = ['Servicos - FUNCIONARIO']
     // #swagger.summary = "Altera um Serviço"
     ctrl.alterar(req,res);
 });
 
-router.delete("/:id", auth.validarAdmin, (req,res) => {
+router.delete("/:id", auth.validarFuncionario, (req,res) => {
     /* #swagger.security = [{
     "bearerAuth": []
     }] */
-    // #swagger.tags = ['Servicos - ADMIN']
+    // #swagger.tags = ['Servicos - FUNCIONARIO']
     // #swagger.summary = "Inativa um Serviço (Exclusão Lógica)"
     ctrl.excluir(req,res);
+});
+
+router.get("/:id", auth.validarToken, (req,res) => {
+    /* #swagger.security = [{
+    "bearerAuth": []  
+    }] */
+    // #swagger.tags = ['Servicos - CLIENTE']
+    // #swagger.summary = "Consulta um Serviço por ID"
+    ctrl.consultarPorId(req,res);
 });
 
 export default router;

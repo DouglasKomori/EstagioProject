@@ -81,4 +81,24 @@ export default class ServicosController {
             return res.status(500).json({msg: "Erro ao excluir o serviço!"});
         }
     }
+
+    async consultarPorId(req,res){
+        try{
+            let id = req.params.id;
+            if(!id){
+                return res.status(400).json({msg: "Informe o id para consultar um serviço!"});
+            }
+            const result = await this.#repoServicos.consultarPorId(id);
+            if(result){
+                return res.status(200).json(result);
+            }
+            else{
+                return res.status(404).json({msg: "Serviço não encontrado!"});
+            }
+        }
+        catch(exception){
+            console.log(exception);
+            return res.status(500).json({msg: "Erro ao consultar o serviço!"});
+        }
+    }
 }

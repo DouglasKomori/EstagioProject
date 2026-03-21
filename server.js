@@ -8,6 +8,8 @@ import authRoute from './routes/authRoute.js';
 import usuarioRoute from './routes/usuarioRoute.js';
 import servicosRoute from './routes/servicosRoute.js';
 import produtoRoute from './routes/produtoRoute.js';
+import marcaRoute from './routes/marcaRoute.js';
+import pessoaRoute from './routes/pessoaRoute.js';
 
 const require = createRequire(import.meta.url);
 const outputJson = require("./swaggerOutput.json");
@@ -23,6 +25,8 @@ server.use("/usuario", usuarioRoute);
 server.use("/autenticacao", authRoute);
 server.use("/servicos", servicosRoute);
 server.use("/produtos", produtoRoute);
+server.use("/marcas", marcaRoute);
+server.use("/pessoas", pessoaRoute);
 
 server.listen(5000, function() {
     console.log("backend em funcionamento na porta 5000!");

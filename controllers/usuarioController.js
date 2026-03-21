@@ -60,6 +60,46 @@ export default class UsuarioController {
     }
 }
 
+    async cadastrarAdmin(req, res) {
+        try {
+            const { nome, email, senha, telefone } = req.body;
+
+            if (!nome || !email || !senha) {
+                return res.status(400).json({ erro: "Os campos nome, email e senha são obrigatórios para gerar o acesso." });
+            }
+
+            const usuarios = await this.#repository.listar();
+            const emailJaExiste = usuarios.some(u => u.email === email);
+            if (emailJaExiste) {
+                return res.status(400).json({ erro: "Este e-mail já possui um acesso no sistema." });
+            }
+
+            const crypto = await import('crypto'); 
+            const senhaHash = crypto.createHash('sha256').update(senha).digest('hex');
+
+            const Usuario = (await import('../entities/usuario.js')).default;
+            const usuario = new Usuario();
+            usuario.nome = nome;
+            usuario.email = email;
+            usuario.senha = senhaHash;
+            usuario.telefone = telefone || null; 
+            
+            usuario.perfil = "FUNCIONARIO"; 
+
+            const resultado = await this.#repository.cadastrar(usuario);
+            
+            if (resultado) {
+                return res.status(201).json({ msg: "Acesso de Administrador gerado com sucesso!" });
+            } else {
+                return res.status(400).json({ erro: "Não foi possível gerar o acesso no banco de dados." });
+            }
+
+        } catch (exception) {
+            console.error("Erro ao cadastrarAdmin:", exception);
+            return res.status(500).json({ erro: "Erro interno ao gerar o acesso." });
+        }
+    }
+
     async alterar(req,res){
         try{
             let id = req.params.id;

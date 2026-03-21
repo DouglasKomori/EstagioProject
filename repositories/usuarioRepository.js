@@ -50,9 +50,13 @@ export default class UsuarioRepository {
         return usuarios;
     }
 
-    async cadastrar(usuario){
-        const sql= "insert into cliente (nome, email, senha, telefone) values (?, ?, ?, ?)";
-        const params = [usuario.nome, usuario.email, usuario.senha, usuario.telefone];
+async cadastrar(usuario){
+        const sql = "insert into cliente (nome, email, senha, telefone, perfil) values (?, ?, ?, ?, ?)";
+        
+        const perfilDefinitivo = usuario.perfil ? usuario.perfil : 'CLIENTE';
+
+        const params = [usuario.nome, usuario.email, usuario.senha, usuario.telefone,perfilDefinitivo];
+        
         const result = await this.#banco.ExecutaComandoNonQuery(sql, params);
         return result;
     }
