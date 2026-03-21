@@ -1,7 +1,21 @@
+"use client"; 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; 
 
 export default function Sobre() {
+  const router = useRouter();
+
+  const handleAgendarClick = () => {
+    const token = localStorage.getItem("token");
+    
+    if (token) {
+      router.push("/agendamento");
+    } else {
+      router.push("/login"); 
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-black text-zinc-50 font-sans flex flex-col">
       
@@ -50,12 +64,13 @@ export default function Sobre() {
 
           <div className="mt-16 text-center border-t border-zinc-900 pt-12">
             <h2 className="text-2xl font-bold mb-6 text-white">Vamos marcar um horário?</h2>
-            <Link 
-              href="/agendamento" 
+            {/* O <Link> foi trocado por um <button> com onClick */}
+            <button 
+              onClick={handleAgendarClick}
               className="inline-block px-8 py-4 text-lg font-bold bg-[#E4B77D] text-black rounded-md hover:bg-[#cfa56d] transition-transform hover:scale-105 shadow-lg shadow-[#E4B77D]/10"
             >
               Agendar Meu Horário
-            </Link>
+            </button>
           </div>
 
         </div>
