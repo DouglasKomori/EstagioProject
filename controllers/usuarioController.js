@@ -30,7 +30,11 @@ export default class UsuarioController {
         if (!nome || !email || !senha) {
             return res.status(400).json({ erro: "Os campos nome, email e senha são obrigatórios." });
         }
-
+        
+        const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!regexEmail.test(email)) {
+            return res.status(400).json({ erro: "Formato de e-mail inválido. Certifique-se de usar '@' e '.'" });
+        }
         const usuarios = await this.#repository.listar();
         const emailJaExiste = usuarios.some(u => u.email === email);
         if (emailJaExiste) {
@@ -66,6 +70,11 @@ export default class UsuarioController {
 
             if (!nome || !email || !senha) {
                 return res.status(400).json({ erro: "Os campos nome, email e senha são obrigatórios para gerar o acesso." });
+            }
+
+            const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!regexEmail.test(email)) {
+            return res.status(400).json({ erro: "Formato de e-mail inválido. Certifique-se de usar '@' e '.'" });
             }
 
             const usuarios = await this.#repository.listar();
@@ -108,6 +117,12 @@ export default class UsuarioController {
             if(!id || !nome || !email || !senha){
                 return res.status(400).json({msg: "Informe id, nome, email e senha para alterar um usuário!"});
             }
+
+            const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!regexEmail.test(email)) {
+            return res.status(400).json({ erro: "Formato de e-mail inválido. Certifique-se de usar '@' e '.'" });
+            }
+            
             const crypto = await import('crypto');
             const senhaHash = crypto.createHash('sha256').update(senha).digest('hex');
 

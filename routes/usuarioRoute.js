@@ -39,7 +39,17 @@ router.post("/",  (req, res) => {
 });
 
 
-router.post("/admin", auth.validarFuncionario, (req, res) => {
+router.post("/admin", (req, res) => {
+    if(validarToken(req)){
+        if(validarFuncionario(req)){
+            next();
+        } else{
+            res.status(403).json({message: "Acesso negado. Funcionários apenas."});
+            res.render("/login");
+        }
+    } else{
+        res.status(403).json({message: "Acesso negado. Funcionários apenas."});
+    }
     /* #swagger.security = [{
         "bearerAuth": []
     }]*/
@@ -47,6 +57,7 @@ router.post("/admin", auth.validarFuncionario, (req, res) => {
     // #swagger.summary = 'Cadastra um novo usuário com perfil de ADMIN'
     ctrl.cadastrarAdmin(req, res);
 });
+
 
 router.put("/:id", auth.validarFuncionario, (req,res) => {
     /* #swagger.security = [{

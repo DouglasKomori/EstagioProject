@@ -117,7 +117,7 @@ export default function Cadastro() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-3 text-white focus:outline-none focus:border-[#E4B77D] focus:ring-1 focus:ring-[#E4B77D] transition-all"
-                placeholder="seu@email.com"
+                placeholder="seu@gmail.com"
               />
             </div>
 

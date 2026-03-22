@@ -36,6 +36,12 @@ export default class PessoaController {
                 return res.status(400).json({msg: "Para Pessoa Jurídica, o CNPJ é obrigatório!"});
             }
             
+            if (email) {
+                const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!regexEmail.test(email)) {
+                    return res.status(400).json({msg: "O formato do e-mail fornecido é inválido."});
+                }
+            }
             const result = await this.#repoPessoa.cadastrar({
                 nome, tipoPessoa, telefone, email, cpf, dataNascimento, cnpj, nomeFantasia
             });
@@ -61,6 +67,13 @@ export default class PessoaController {
             
             if(!id || !nome || !tipoPessoa){
                 return res.status(400).json({msg: "Informe o ID, nome e tipo para alterar!"});
+            }
+            
+            if (email) {
+                const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!regexEmail.test(email)) {
+                    return res.status(400).json({msg: "O formato do e-mail fornecido é inválido."});
+                }
             }
             
             const result = await this.#repoPessoa.alterar({

@@ -64,7 +64,6 @@ export default function Sobre() {
 
           <div className="mt-16 text-center border-t border-zinc-900 pt-12">
             <h2 className="text-2xl font-bold mb-6 text-white">Vamos marcar um horário?</h2>
-            {/* O <Link> foi trocado por um <button> com onClick */}
             <button 
               onClick={handleAgendarClick}
               className="inline-block px-8 py-4 text-lg font-bold bg-[#E4B77D] text-black rounded-md hover:bg-[#cfa56d] transition-transform hover:scale-105 shadow-lg shadow-[#E4B77D]/10"
