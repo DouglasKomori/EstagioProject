@@ -112,25 +112,22 @@ export default class UsuarioController {
     async alterar(req,res){
         try{
             let id = req.params.id;
-            let {nome, email, senha, telefone} = req.body;
+            let {nome, email, telefone} = req.body;
 
-            if(!id || !nome || !email || !senha){
-                return res.status(400).json({msg: "Informe id, nome, email e senha para alterar um usuário!"});
+            if(!id || !nome || !email){
+                return res.status(400).json({msg: "Informe id, nome e email para alterar um usuário!"});
             }
 
             const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!regexEmail.test(email)) {
-            return res.status(400).json({ erro: "Formato de e-mail inválido. Certifique-se de usar '@' e '.'" });
+                return res.status(400).json({ erro: "Formato de e-mail inválido. Certifique-se de usar '@' e '.'" });
             }
-            
-            const crypto = await import('crypto');
-            const senhaHash = crypto.createHash('sha256').update(senha).digest('hex');
 
+            let Usuario = (await import('../entities/usuario.js')).default;
             let usuario = new Usuario();
             usuario.id = id;
             usuario.nome = nome;
             usuario.email = email;
-            usuario.senha = senhaHash;
             usuario.telefone = telefone;
 
             const resultado = await this.#repository.alterar(usuario);

@@ -39,17 +39,7 @@ router.post("/",  (req, res) => {
 });
 
 
-router.post("/admin", (req, res) => {
-    if(validarToken(req)){
-        if(validarFuncionario(req)){
-            next();
-        } else{
-            res.status(403).json({message: "Acesso negado. Funcionários apenas."});
-            res.render("/login");
-        }
-    } else{
-        res.status(403).json({message: "Acesso negado. Funcionários apenas."});
-    }
+router.post("/admin", auth.validarAdmin, (req, res) => {
     /* #swagger.security = [{
         "bearerAuth": []
     }]*/

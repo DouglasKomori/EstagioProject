@@ -39,6 +39,26 @@ export default class PessoaRepository {
         return lista;
     }
 
+    async listarProfissionais() {
+        // Busca apenas as Pessoas Físicas (Equipe) que estão ativas
+        let sql = "SELECT * FROM pessoa WHERE tipoPessoa = 'PF' AND ativo = 1";
+        const rows = await this.#banco.ExecutaComando(sql);
+        
+        let lista = [];
+        for(let i = 0; i < rows.length; i++){
+            let row = rows[i];
+            let p = new Pessoa();
+            p.id = row["id"];
+            p.nome = row["nome"];
+            p.tipoPessoa = row["tipoPessoa"];
+            p.telefone = row["telefone"];
+            p.email = row["email"];
+            p.ativo = row["ativo"];
+            lista.push(p);
+        }
+        return lista;
+    }
+
     async cadastrar(pessoa) {
         try {
             await this.#banco.AbreTransacao();

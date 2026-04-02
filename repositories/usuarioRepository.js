@@ -61,9 +61,10 @@ async cadastrar(usuario){
         return result;
     }
 
-async alterar(usuario){
-        const sql = "update cliente set nome = ?, email = ?, senha = ?, telefone = ? where id = ?";
-        const params = [usuario.nome, usuario.email, usuario.senha, usuario.telefone, parseInt(usuario.id)];
+    async alterar(usuario){
+        const sql = "update cliente set nome = ?, email = ?, telefone = ? where id = ?";
+        
+        const params = [usuario.nome, usuario.email, usuario.telefone, parseInt(usuario.id)];
         
         console.log("Parâmetros do SQL:", params);
 

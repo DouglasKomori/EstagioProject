@@ -124,4 +124,18 @@ export default class PessoaController {
             return res.status(500).json({msg: "Erro ao consultar o cadastro!"});
         }
     }
+
+    async listarProfissionais(req, res) {
+        try {
+            let lista = await this.#repoPessoa.listarProfissionais();
+            if(lista.length > 0)
+                res.status(200).json(lista);
+            else 
+                res.status(404).json({msg: "Nenhum profissional encontrado!"});
+        }
+        catch(exception) {
+            console.log(exception);
+            res.status(500).json({erro: "Erro ao listar os profissionais"});
+        }
+    }
 }

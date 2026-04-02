@@ -6,6 +6,7 @@ const router = express.Router();
 const auth = new AuthMiddleware();
 const ctrl = new PessoaController();
 
+
 router.get("/", auth.validarAdmin, (req,res) => {
     /* #swagger.security = [{
     "bearerAuth": []
@@ -22,6 +23,15 @@ router.post("/", auth.validarAdmin, (req,res) => {
     // #swagger.tags = ['Pessoas - ADMIN']
     // #swagger.summary = "Cadastra uma nova Pessoa"
     ctrl.cadastrar(req,res);
+});
+
+router.get("/profissionais", auth.validarToken, (req,res) => {
+    /* #swagger.security = [{
+    "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Pessoas - CLIENTE']
+    // #swagger.summary = "Lista os Profissionais (Pessoas Físicas) disponíveis para agendamento"
+    ctrl.listarProfissionais(req,res);
 });
 
 router.put("/:id", auth.validarAdmin, (req,res) => {
