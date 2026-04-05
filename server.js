@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import cors from 'cors';
@@ -16,7 +17,13 @@ const require = createRequire(import.meta.url);
 const outputJson = require("./swaggerOutput.json");
 const server = express();
 
-server.use(cors({credentials: true, origin: "http://localhost:3000"}));
+const PORT = process.env.PORT || 5000;
+
+server.use(cors({
+    credentials: true, 
+    origin: process.env.FRONTEND_URL || "http://localhost:3000"
+}));
+
 server.use(express.json());
 server.use(cookieParser());
 
@@ -30,6 +37,6 @@ server.use("/marcas", marcaRoute);
 server.use("/pessoas", pessoaRoute);
 server.use("/agendamentos", agendaRoute);
 
-server.listen(5000, function() {
-    console.log("backend em funcionamento na porta 5000!");
+server.listen(PORT, function() {
+    console.log(`backend em funcionamento na porta ${PORT}!`);
 });

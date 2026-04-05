@@ -1,4 +1,5 @@
-import mysql from 'mysql2'
+import mysql from 'mysql2';
+import 'dotenv/config';
 
 export default class Database {
 
@@ -7,13 +8,12 @@ export default class Database {
     get conexao() { return this.#conexao;} set conexao(conexao) { this.#conexao = conexao; }
 
     constructor() {
-
         this.#conexao = mysql.createPool({
-            host: '127.0.0.1',
-            port: 3306, 
-            database: 'test', 
-            user: 'root', 
-            password: '',
+            host: process.env.DB_HOST || '127.0.0.1',
+            port: process.env.DB_PORT || 3306, 
+            database: process.env.DB_NAME || 'test', 
+            user: process.env.DB_USER || 'root', 
+            password: process.env.DB_PASSWORD || '',
             idleTimeout: 30000,
             connectionLimit: 50
         });
@@ -92,5 +92,3 @@ export default class Database {
     }
 
 }
-
-
