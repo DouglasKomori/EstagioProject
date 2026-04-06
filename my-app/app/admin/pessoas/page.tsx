@@ -53,7 +53,7 @@ export default function GerenciarPessoas() {
 
   const carregarPessoas = async () => {
     try {
-      const response = await fetch("process.env.NEXT_PUBLIC_API_URL/pessoas", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (response.ok) {
@@ -143,7 +143,7 @@ export default function GerenciarPessoas() {
     setErro("");
 
     const metodo = id ? "PUT" : "POST";
-    const url = id ? `process.env.NEXT_PUBLIC_API_URL/pessoas/${id}` : "process.env.NEXT_PUBLIC_API_URL/pessoas";
+    const url = id ? `${process.env.NEXT_PUBLIC_API_URL}/pessoas/${id}` : `${process.env.NEXT_PUBLIC_API_URL}/pessoas`;
 
     const payload = {
       nome,
@@ -185,7 +185,7 @@ export default function GerenciarPessoas() {
   const excluirPessoa = async (idExclusao: string) => {
     if (!window.confirm("Atenção: Tem certeza que deseja inativar este registro?")) return;
     try {
-      const response = await fetch(`process.env.NEXT_PUBLIC_API_URL/pessoas/${idExclusao}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${idExclusao}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
@@ -206,7 +206,7 @@ export default function GerenciarPessoas() {
     setErro("");
 
     try {
-      const response = await fetch("process.env.NEXT_PUBLIC_API_URL/usuario/admin", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario/admin`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

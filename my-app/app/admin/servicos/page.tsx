@@ -27,7 +27,7 @@ export default function GerenciarServicos() {
 
   const carregarServicos = async () => {
     try {
-      const response = await fetch("process.env.NEXT_PUBLIC_API_URL/servicos", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (response.ok) {
@@ -72,7 +72,7 @@ export default function GerenciarServicos() {
     setErro("");
 
     const metodo = id ? "PUT" : "POST";
-    const url = id ? `process.env.NEXT_PUBLIC_API_URL/servicos/${id}` : "process.env.NEXT_PUBLIC_API_URL/servicos";
+    const url = id ? `${process.env.NEXT_PUBLIC_API_URL}/servicos/${id}` : `${process.env.NEXT_PUBLIC_API_URL}/servicos`;
 
     try {
       const response = await fetch(url, {
@@ -109,7 +109,7 @@ export default function GerenciarServicos() {
     if (!window.confirm("Tem certeza que deseja inativar este serviço?")) return;
 
     try {
-      const response = await fetch(`process.env.NEXT_PUBLIC_API_URL/servicos/${idExclusao}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos/${idExclusao}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });

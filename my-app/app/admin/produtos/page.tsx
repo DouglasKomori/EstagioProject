@@ -32,7 +32,7 @@ export default function GerenciarProdutos() {
 
   const carregarProdutos = async () => {
     try {
-      const response = await fetch("process.env.NEXT_PUBLIC_API_URL/produtos", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/produtos`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (response.ok) {
@@ -46,7 +46,7 @@ export default function GerenciarProdutos() {
 
   const carregarMarcas = async () => {
     try {
-      const response = await fetch("process.env.NEXT_PUBLIC_API_URL/marcas", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/marcas`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (response.ok) {
@@ -93,7 +93,7 @@ export default function GerenciarProdutos() {
     setErro("");
 
     const metodo = id ? "PUT" : "POST";
-    const url = id ? `process.env.NEXT_PUBLIC_API_URL/produtos/${id}` : "process.env.NEXT_PUBLIC_API_URL/produtos";
+    const url = id ? `${process.env.NEXT_PUBLIC_API_URL}/produtos/${id}` : `${process.env.NEXT_PUBLIC_API_URL}/produtos`;
 
     try {
       const response = await fetch(url, {
@@ -132,7 +132,7 @@ export default function GerenciarProdutos() {
     if (!window.confirm("Atenção: Tem certeza que deseja excluir/inativar este produto do estoque?")) return;
 
     try {
-      const response = await fetch(`process.env.NEXT_PUBLIC_API_URL/produtos/${idExclusao}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/produtos/${idExclusao}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });

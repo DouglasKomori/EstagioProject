@@ -58,7 +58,7 @@ export default function AgendamentoCliente() {
       const dataFormatada = `${ano}-${mes}-${dia}`;
 
       try {
-        const res = await fetch(`process.env.NEXT_PUBLIC_API_URL/agendamentos/ocupados?data=${dataFormatada}&profissionalId=${profissionalSelecionado}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/ocupados?data=${dataFormatada}&profissionalId=${profissionalSelecionado}`, {
           headers: { "Authorization": `Bearer ${obterToken()}` }
         });
         if (res.ok) {
@@ -78,15 +78,15 @@ export default function AgendamentoCliente() {
       const headers = { "Authorization": `Bearer ${obterToken()}` };
       
       // Busca Profissionais
-      const resPro = await fetch("process.env.NEXT_PUBLIC_API_URL/pessoas/profissionais", { headers });
+      const resPro = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/profissionais`, { headers });
       if(resPro.ok) setListaProfissionais(await resPro.json());
 
       // Busca Serviços
-      const resServicos = await fetch("process.env.NEXT_PUBLIC_API_URL/servicos", { headers });
+      const resServicos = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos`, { headers });
       if(resServicos.ok) setListaServicos(await resServicos.json());
 
       // Busca Agendamentos do Cliente (Precisaremos criar essa rota no Back-end no próximo passo!)
-      const resAgendamentos = await fetch("process.env.NEXT_PUBLIC_API_URL/agendamentos/meus", { headers });
+      const resAgendamentos = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/meus`, { headers });
       if(resAgendamentos.ok) setMeusAgendamentos(await resAgendamentos.json());
       
     } catch (error) {
@@ -111,7 +111,7 @@ export default function AgendamentoCliente() {
     if (!window.confirm("Deseja realmente CANCELAR este agendamento?")) return;
     
     try {
-      const response = await fetch(`process.env.NEXT_PUBLIC_API_URL/agendamentos/${id}/cancelar`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/${id}/cancelar`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
@@ -173,7 +173,7 @@ export default function AgendamentoCliente() {
 
     setLoading(true);
     try {
-      const response = await fetch("process.env.NEXT_PUBLIC_API_URL/agendamentos", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${obterToken()}` },
         body: JSON.stringify(payload)

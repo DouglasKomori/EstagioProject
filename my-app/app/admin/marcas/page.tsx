@@ -24,7 +24,7 @@ export default function GerenciarMarcas() {
 
   const carregarMarcas = async () => {
     try {
-      const response = await fetch("process.env.NEXT_PUBLIC_API_URL/marcas", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/marcas`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (response.ok) {
@@ -61,7 +61,7 @@ export default function GerenciarMarcas() {
     setErro("");
 
     const metodo = id ? "PUT" : "POST";
-    const url = id ? `process.env.NEXT_PUBLIC_API_URL/marcas/${id}` : "process.env.NEXT_PUBLIC_API_URL/marcas";
+    const url = id ? `${process.env.NEXT_PUBLIC_API_URL}/marcas/${id}` : `${process.env.NEXT_PUBLIC_API_URL}/marcas`;
 
     try {
       const response = await fetch(url, {
@@ -93,7 +93,7 @@ export default function GerenciarMarcas() {
     if (!window.confirm("Atenção: Tem certeza que deseja excluir/inativar esta marca? Produtos vinculados a ela poderão ser afetados.")) return;
 
     try {
-      const response = await fetch(`process.env.NEXT_PUBLIC_API_URL/marcas/${idExclusao}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/marcas/${idExclusao}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
