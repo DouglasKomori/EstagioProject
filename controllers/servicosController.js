@@ -7,9 +7,12 @@ export default class ServicosController {
         this.#repoServicos = new ServicosRepository();
     }
 
+    // Atualizado para ler o parâmetro da URL (?inativos=true)
     async listar(req,res){
         try{
-            let lista = await this.#repoServicos.listar();
+            const incluirInativos = req.query.inativos === 'true';
+            let lista = await this.#repoServicos.listar(incluirInativos);
+            
             if(lista.length === 0){
                 return res.status(404).json({msg: "Nenhum serviço encontrado!"});
             }
@@ -21,12 +24,20 @@ export default class ServicosController {
         }
     }
 
+    // Atualizado com a trava de nome duplicado
     async cadastrar(req, res){
         try{
             let {nome, descricao, valor, tempoEstimadoMinutos} = req.body;
             if(!nome || !descricao || !valor || !tempoEstimadoMinutos){
                 return res.status(400).json({msg: "Informe nome, descrição, valor e tempo estimado para cadastrar um serviço!"});
             }
+
+            // NOVA REGRA: Verifica se já existe
+            const existe = await this.#repoServicos.verificarNomeExistente(nome);
+            if (existe) {
+                return res.status(400).json({msg: "Já existe um serviço cadastrado com este nome!"});
+            }
+
             const result = await this.#repoServicos.cadastrar({nome, descricao, valor, tempoEstimadoMinutos});
             if(result){
                 return res.status(201).json({msg: "Serviço cadastrado com sucesso!"});
@@ -48,6 +59,12 @@ export default class ServicosController {
             if(!id || !nome || !descricao || !valor || !tempoEstimadoMinutos){
                 return res.status(400).json({msg: "Informe id, nome, descrição, valor e tempo estimado para alterar um serviço!"});
             }
+
+            const existe = await this.#repoServicos.verificarNomeExistente(nome, id);
+            if (existe) {
+                return res.status(400).json({msg: "Este nome já está sendo usado por outro serviço!"});
+            }
+
             const result = await this.#repoServicos.alterar({id, nome, descricao, valor, tempoEstimadoMinutos});
             if(result){
                 return res.status(200).json({msg: "Serviço alterado com sucesso!"});
@@ -79,6 +96,26 @@ export default class ServicosController {
         catch(exception){
             console.log(exception);
             return res.status(500).json({msg: "Erro ao excluir o serviço!"});
+        }
+    }
+
+    async reativar(req,res){
+        try{
+            let id = req.params.id;
+            if(!id){
+                return res.status(400).json({msg: "Informe o id para reativar um serviço!"});
+            }
+            const result = await this.#repoServicos.reativar(id);
+            if(result){
+                return res.status(200).json({msg: "Serviço reativado com sucesso!"});
+            }
+            else{
+                return res.status(400).json({msg: "Não foi possível reativar o serviço!"});
+            }
+        }
+        catch(exception){
+            console.log(exception);
+            return res.status(500).json({msg: "Erro ao reativar o serviço!"});
         }
     }
 

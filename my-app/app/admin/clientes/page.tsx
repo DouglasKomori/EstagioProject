@@ -11,6 +11,8 @@ export default function GerenciarClientes() {
   const [sucesso, setSucesso] = useState("");
   const [busca, setBusca] = useState("");
 
+  const [mostrarInativos, setMostrarInativos] = useState(false);
+
   const [id, setId] = useState("");
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -19,7 +21,7 @@ export default function GerenciarClientes() {
 
   useEffect(() => {
     carregarClientes();
-  }, []);
+  }, [mostrarInativos]);
 
   const obterToken = () => {
     return localStorage.getItem("token") || "";
@@ -27,13 +29,17 @@ export default function GerenciarClientes() {
 
   const carregarClientes = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario`, {
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/usuario${mostrarInativos ? '?inativos=true' : ''}`;
+      const response = await fetch(url, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (response.ok) {
         const data = await response.json();
+        // O backend retorna todos os usuários, filtramos apenas os clientes no front
         const apenasClientes = data.filter((user: any) => user.perfil === "CLIENTE");
         setClientes(apenasClientes);
+      } else {
+        setClientes([]);
       }
     } catch (error) {
       console.error("Erro ao carregar clientes", error);
@@ -112,7 +118,7 @@ export default function GerenciarClientes() {
   };
 
   const excluirCliente = async (idExclusao: string) => {
-    if (!window.confirm("Atenção: Tem certeza que deseja excluir/inativar este cliente do sistema?")) return;
+    if (!window.confirm("Atenção: Tem certeza que deseja inativar este cliente do sistema?")) return;
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario/${idExclusao}`, {
@@ -124,10 +130,30 @@ export default function GerenciarClientes() {
         carregarClientes();
         exibirSucesso("Cliente inativado com sucesso!");
       } else {
-        alert("Não foi possível excluir o cliente.");
+        alert("Não foi possível inativar o cliente.");
       }
     } catch (error) {
       console.error("Erro ao excluir", error);
+    }
+  };
+
+  const reativarCliente = async (idReativacao: string) => {
+    if (!window.confirm("Deseja reativar este cliente? Ele poderá acessar o sistema e agendar novamente.")) return;
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario/${idReativacao}/reativar`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+
+      if (response.ok) {
+        carregarClientes();
+        exibirSucesso("Cliente reativado com sucesso!");
+      } else {
+        alert("Não foi possível reativar o cliente.");
+      }
+    } catch (error) {
+      console.error("Erro ao reativar", error);
     }
   };
 
@@ -138,7 +164,6 @@ export default function GerenciarClientes() {
   );
 
   return (
-    
     <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8 font-sans relative">
       
       <header className="flex justify-between items-center mb-6 border-b border-zinc-900 pb-4 max-w-6xl mx-auto">
@@ -168,19 +193,38 @@ export default function GerenciarClientes() {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto mb-8 relative">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+      {/* Barra de Pesquisa e Filtro de Inativos */}
+      <div className="max-w-6xl mx-auto mb-8 flex flex-col sm:flex-row gap-4">
+        
+        {/* Input de Busca */}
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Buscar cliente por nome, e-mail ou telefone..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#E4B77D] transition-all shadow-sm"
+          />
         </div>
-        <input
-          type="text"
-          placeholder="Buscar cliente por nome, e-mail ou telefone..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#E4B77D] transition-all shadow-sm"
-        />
+
+        {/* Checkbox de Inativos */}
+        <div className="flex items-center gap-3 px-5 py-3 bg-zinc-900 border border-zinc-800 rounded-lg">
+          <input
+            type="checkbox"
+            id="filtroInativos"
+            checked={mostrarInativos}
+            onChange={(e) => setMostrarInativos(e.target.checked)}
+            className="w-4 h-4 accent-[#E4B77D] cursor-pointer"
+          />
+          <label htmlFor="filtroInativos" className="text-sm text-zinc-300 cursor-pointer select-none">
+            Exibir Inativos
+          </label>
+        </div>
       </div>
       
       <main className="max-w-6xl mx-auto bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-lg">
@@ -203,17 +247,32 @@ export default function GerenciarClientes() {
                 </tr>
               ) : (
                 clientesFiltrados.map((cliente) => (
-                  <tr key={cliente.id} className="hover:bg-zinc-800/50 transition-colors">
+                  // Cor de fundo avermelhada se ativo === false
+                  <tr key={cliente.id} className={`transition-colors ${cliente.ativo === false ? 'bg-red-950/10 hover:bg-red-950/20' : 'hover:bg-zinc-800/50'}`}>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-[#E4B77D] font-bold text-xs uppercase border border-zinc-700 flex-shrink-0">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs uppercase border flex-shrink-0 ${cliente.ativo === false ? 'bg-zinc-900 border-zinc-800 text-zinc-600' : 'bg-zinc-800 border-zinc-700 text-[#E4B77D]'}`}>
                           {cliente.nome.charAt(0)}
                         </div>
-                        <span className="font-bold text-white whitespace-nowrap">{cliente.nome}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-bold whitespace-nowrap ${cliente.ativo === false ? 'text-zinc-500 line-through' : 'text-white'}`}>
+                            {cliente.nome}
+                          </span>
+                          {/* Selo Visual de Inativo */}
+                          {cliente.ativo === false && (
+                            <span className="text-[10px] uppercase font-bold bg-red-900/40 text-red-400 px-2 py-0.5 rounded-md border border-red-900/50">
+                              Inativo
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
-                    <td className="p-4 text-zinc-300 text-sm whitespace-nowrap">{cliente.email}</td>
-                    <td className="p-4 text-zinc-300 text-sm whitespace-nowrap">{cliente.telefone || "N/A"}</td>
+                    <td className={`p-4 text-sm whitespace-nowrap ${cliente.ativo === false ? 'text-zinc-600' : 'text-zinc-300'}`}>
+                      {cliente.email}
+                    </td>
+                    <td className={`p-4 text-sm whitespace-nowrap ${cliente.ativo === false ? 'text-zinc-600' : 'text-zinc-300'}`}>
+                      {cliente.telefone || "N/A"}
+                    </td>
                     <td className="p-4 text-right whitespace-nowrap">
                       <div className="flex justify-end gap-4">
                         <button 
@@ -222,12 +281,23 @@ export default function GerenciarClientes() {
                         >
                           Editar
                         </button>
-                        <button 
-                          onClick={() => excluirCliente(cliente.id)}
-                          className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium"
-                        >
-                          Inativar
-                        </button>
+                        
+                        {/* Lógica Condicional: Se ativo=true mostra Inativar, se ativo=false mostra Reativar */}
+                        {cliente.ativo !== false ? (
+                          <button 
+                            onClick={() => excluirCliente(cliente.id)}
+                            className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium"
+                          >
+                            Inativar
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => reativarCliente(cliente.id)}
+                            className="text-sm text-green-500 hover:text-green-400 transition-colors font-medium"
+                          >
+                            Reativar
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

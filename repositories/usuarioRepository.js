@@ -9,40 +9,36 @@ export default class UsuarioRepository {
     }
 
     async validarAcesso(email, senha) {
-
-    const sql = "select * from cliente where email = ? and senha = ? and ativo = 1";
-    const valores = [email, senha];
-
-    const row = await this.#banco.ExecutaComando(sql, valores);
-
-    if(row.length > 0) {
+        const sql = "select * from cliente where email = ? and senha = ? and ativo = 1";
+        const valores = [email, senha];
+        const row = await this.#banco.ExecutaComando(sql, valores);
+        if(row.length > 0) {
             return this.toMap(row[0]);
         }
-
         return null;
     }
 
-        async buscarPorId(id) {
+    async buscarPorId(id) {
         const sql = "select * from cliente where id = ?";
         const params = [id];
-        
         const rows = await this.#banco.ExecutaComando(sql, params);
-
         if(rows.length > 0) {
             const row = rows[0];
             const usuario = this.toMap(row);
-
             return usuario;
         }
-
         return null;
     }
 
-    async listar(){
+    async listar(incluirInativos = false){
         let sql = "select * from cliente";
+        
+        if (!incluirInativos) {
+            sql += " where ativo = 1";
+        }
+
         const rows = await this.#banco.ExecutaComando(sql);
         let usuarios = [];
-
         for(let i = 0; i<rows.length; i++){
             const row = rows[i];
             usuarios.push(this.toMap(row));
@@ -50,12 +46,16 @@ export default class UsuarioRepository {
         return usuarios;
     }
 
-async cadastrar(usuario){
-        const sql = "insert into cliente (nome, email, senha, telefone, perfil) values (?, ?, ?, ?, ?)";
-        
-        const perfilDefinitivo = usuario.perfil ? usuario.perfil : 'CLIENTE';
+    async verificarEmailExistente(email, idIgnorar = 0) {
+        const sql = "SELECT id FROM cliente WHERE LOWER(email) = LOWER(?) AND id != ?";
+        const rows = await this.#banco.ExecutaComando(sql, [email, idIgnorar]);
+        return rows.length > 0;
+    }
 
-        const params = [usuario.nome, usuario.email, usuario.senha, usuario.telefone,perfilDefinitivo];
+    async cadastrar(usuario){
+        const sql = "insert into cliente (nome, email, senha, telefone, perfil) values (?, ?, ?, ?, ?)";
+        const perfilDefinitivo = usuario.perfil ? usuario.perfil : 'CLIENTE';
+        const params = [usuario.nome, usuario.email, usuario.senha, usuario.telefone, perfilDefinitivo];
         
         const result = await this.#banco.ExecutaComandoNonQuery(sql, params);
         return result;
@@ -63,17 +63,21 @@ async cadastrar(usuario){
 
     async alterar(usuario){
         const sql = "update cliente set nome = ?, email = ?, telefone = ? where id = ?";
-        
         const params = [usuario.nome, usuario.email, usuario.telefone, parseInt(usuario.id)];
         
-        console.log("Parâmetros do SQL:", params);
-
         const result = await this.#banco.ExecutaComandoNonQuery(sql, params);
         return result;
     }
 
     async excluir(id) {
         const sql = "update cliente set ativo = 0 where id = ?";
+        const params = [parseInt(id)]; 
+        const result = await this.#banco.ExecutaComandoNonQuery(sql, params);
+        return result;
+    }
+
+    async reativar(id) {
+        const sql = "update cliente set ativo = 1 where id = ?";
         const params = [parseInt(id)]; 
         const result = await this.#banco.ExecutaComandoNonQuery(sql, params);
         return result;

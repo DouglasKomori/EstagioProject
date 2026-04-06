@@ -33,6 +33,15 @@ router.put("/:id", auth.validarFuncionario, (req,res) => {
     ctrl.alterar(req,res);
 });
 
+router.put("/:id/reativar", auth.validarFuncionario, (req,res) => {
+    /* #swagger.security = [{
+    "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Servicos - FUNCIONARIO']
+    // #swagger.summary = "Reativa um Serviço"
+    ctrl.reativar(req,res);
+});
+
 router.delete("/:id", auth.validarFuncionario, (req,res) => {
     /* #swagger.security = [{
     "bearerAuth": []

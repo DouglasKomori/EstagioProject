@@ -11,28 +11,37 @@ export default function GerenciarServicos() {
   const [sucesso, setSucesso] = useState("");
   const [busca, setBusca] = useState("");
 
+  // NOVO: Estado para controlar o filtro de inativos
+  const [mostrarInativos, setMostrarInativos] = useState(false);
+
   const [id, setId] = useState("");
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
   const [tempoEstimadoMinutos, setTempoEstimadoMinutos] = useState("");
 
+  // ATUALIZADO: Recarrega sempre que o checkbox for clicado
   useEffect(() => {
     carregarServicos();
-  }, []);
+  }, [mostrarInativos]);
 
   const obterToken = () => {
     return localStorage.getItem("token") || "";
   };
 
+  // ATUALIZADO: Envia o parâmetro para a API
   const carregarServicos = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos`, {
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/servicos${mostrarInativos ? '?inativos=true' : ''}`;
+      const response = await fetch(url, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (response.ok) {
         const data = await response.json();
         setServicos(data);
+      } else {
+        // Se retornar 404 (vazio), limpamos a tela
+        setServicos([]);
       }
     } catch (error) {
       console.error("Erro ao carregar serviços", error);
@@ -118,14 +127,34 @@ export default function GerenciarServicos() {
         carregarServicos();
         exibirSucesso("Serviço inativado com sucesso!");
       } else {
-        alert("Não foi possível excluir o serviço.");
+        alert("Não foi possível inativar o serviço.");
       }
     } catch (error) {
       console.error("Erro ao excluir", error);
     }
   };
 
-  //Filtra os serviços pelo nome em tempo real
+  const reativarServico = async (idReativacao: string) => {
+    if (!window.confirm("Deseja reativar este serviço? Ele voltará a ficar disponível para agendamento.")) return;
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos/${idReativacao}/reativar`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+
+      if (response.ok) {
+        carregarServicos();
+        exibirSucesso("Serviço reativado com sucesso!");
+      } else {
+        alert("Não foi possível reativar o serviço.");
+      }
+    } catch (error) {
+      console.error("Erro ao reativar", error);
+    }
+  };
+
+  // Filtra os serviços pelo nome em tempo real
   const servicosFiltrados = servicos.filter((servico) => 
     servico.nome.toLowerCase().includes(busca.toLowerCase())
   );
@@ -160,21 +189,38 @@ export default function GerenciarServicos() {
         </div>
       )}
 
-      {/* Barra de Pesquisa */}
-      <div className="max-w-6xl mx-auto mb-8 relative">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          {/* Ícone de Lupa */}
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+      {/* Barra de Pesquisa e Filtro de Inativos */}
+      <div className="max-w-6xl mx-auto mb-8 flex flex-col sm:flex-row gap-4">
+        
+        {/* Input de Busca */}
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Buscar serviço pelo nome..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#E4B77D] transition-all shadow-sm"
+          />
         </div>
-        <input
-          type="text"
-          placeholder="Buscar serviço pelo nome..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#E4B77D] transition-all shadow-sm"
-        />
+
+        {/* Checkbox de Inativos */}
+        <div className="flex items-center gap-3 px-5 py-3 bg-zinc-900 border border-zinc-800 rounded-lg">
+          <input
+            type="checkbox"
+            id="filtroInativos"
+            checked={mostrarInativos}
+            onChange={(e) => setMostrarInativos(e.target.checked)}
+            className="w-4 h-4 accent-[#E4B77D] cursor-pointer"
+          />
+          <label htmlFor="filtroInativos" className="text-sm text-zinc-300 cursor-pointer select-none">
+            Exibir Inativos
+          </label>
+        </div>
       </div>
       
       <main className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -187,16 +233,30 @@ export default function GerenciarServicos() {
           </div>
         ) : (
           servicosFiltrados.map((servico) => (
-            <div key={servico.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex flex-col shadow-lg hover:border-zinc-700 transition-colors">
+            // Se excluido === 1, o card fica levemente avermelhado
+            <div key={servico.id} className={`bg-zinc-900 border ${servico.excluido === 1 ? 'border-red-900/50 bg-red-950/10' : 'border-zinc-800 hover:border-zinc-700'} rounded-xl p-6 flex flex-col shadow-lg transition-colors`}>
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl font-bold text-white">{servico.nome}</h3>
+                <div className="flex flex-col gap-1">
+                  <h3 className={`text-xl font-bold ${servico.excluido === 1 ? 'text-zinc-500 line-through' : 'text-white'}`}>
+                    {servico.nome}
+                  </h3>
+                  {/* Selo Visual de Inativo */}
+                  {servico.excluido === 1 && (
+                    <span className="text-xs w-max bg-red-900/40 text-red-400 px-2 py-0.5 rounded-md border border-red-900/50">
+                      Inativo
+                    </span>
+                  )}
+                </div>
                 <span className="text-[#E4B77D] font-bold bg-[#E4B77D]/10 px-3 py-1 rounded-full text-sm whitespace-nowrap">
                   R$ {Number(servico.valor).toFixed(2).replace('.', ',')}
                 </span>
               </div>
-              <p className="text-zinc-400 text-sm mb-4 flex-grow">{servico.descricao}</p>
               
-              <div className="flex items-center text-zinc-500 text-sm mb-4 gap-2">
+              <p className={`text-sm mb-4 flex-grow ${servico.excluido === 1 ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                {servico.descricao}
+              </p>
+              
+              <div className={`flex items-center text-sm mb-4 gap-2 ${servico.excluido === 1 ? 'text-zinc-600' : 'text-zinc-500'}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -210,12 +270,23 @@ export default function GerenciarServicos() {
                 >
                   Editar
                 </button>
-                <button 
-                  onClick={() => excluirServico(servico.id)}
-                  className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium flex items-center gap-1"
-                >
-                  Inativar
-                </button>
+                
+                {/* Lógica Condicional: Botão de Inativar ou Reativar */}
+                {servico.excluido === 0 ? (
+                  <button 
+                    onClick={() => excluirServico(servico.id)}
+                    className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium flex items-center gap-1"
+                  >
+                    Inativar
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => reativarServico(servico.id)}
+                    className="text-sm text-green-500 hover:text-green-400 transition-colors font-medium flex items-center gap-1"
+                  >
+                    Reativar
+                  </button>
+                )}
               </div>
             </div>
           ))

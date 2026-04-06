@@ -8,8 +8,12 @@ export default class ServicosRepository {
         this.#banco = new Database();
     }
 
-    async listar(){
-        let sql = "select * from servico where excluido = 0";
+    async listar(incluirInativos = false){
+        let sql = "select * from servico";
+        
+        if (!incluirInativos) {
+            sql += " where excluido = 0";
+        }
 
         let rows = await this.#banco.ExecutaComando(sql);
         let lista = [];
@@ -25,6 +29,12 @@ export default class ServicosRepository {
             lista.push(s);
         }
         return lista;
+    }
+
+    async verificarNomeExistente(nome, idIgnorar = 0) {
+        let sql = "SELECT id FROM servico WHERE LOWER(nome) = LOWER(?) AND id != ?";
+        let rows = await this.#banco.ExecutaComando(sql, [nome, idIgnorar]);
+        return rows.length > 0; 
     }
 
     async cadastrar(servico){
@@ -43,6 +53,13 @@ export default class ServicosRepository {
 
     async excluir(id){
         let sql = "update servico set excluido = 1 where id = ?";
+        let params = [id];
+        let result = await this.#banco.ExecutaComandoNonQuery(sql, params);
+        return result;
+    }
+
+    async reativar(id){
+        let sql = "update servico set excluido = 0 where id = ?";
         let params = [id];
         let result = await this.#banco.ExecutaComandoNonQuery(sql, params);
         return result;

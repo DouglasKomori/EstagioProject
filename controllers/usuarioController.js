@@ -11,7 +11,9 @@ export default class UsuarioController {
 
     async listar(req,res){
         try{
-            let lista = await this.#repository.listar();
+            const incluirInativos = req.query.inativos === 'true';
+            let lista = await this.#repository.listar(incluirInativos);
+            
             if(lista.length > 0)
                 res.status(200).json(lista);
             else 
@@ -24,45 +26,45 @@ export default class UsuarioController {
     }
 
     async cadastrar(req, res) {
-    try {
-        const { nome, email, senha, telefone } = req.body;
+        try {
+            const { nome, email, senha, telefone } = req.body;
 
-        if (!nome || !email || !senha) {
-            return res.status(400).json({ erro: "Os campos nome, email e senha são obrigatórios." });
+            if (!nome || !email || !senha) {
+                return res.status(400).json({ erro: "Os campos nome, email e senha são obrigatórios." });
+            }
+            
+            const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!regexEmail.test(email)) {
+                return res.status(400).json({ erro: "Formato de e-mail inválido. Certifique-se de usar '@' e '.'" });
+            }
+            
+            const emailJaExiste = await this.#repository.verificarEmailExistente(email);
+            if (emailJaExiste) {
+                return res.status(400).json({ erro: "Este email já está cadastrado por outro cliente." });
+            }
+
+            const crypto = await import('crypto'); 
+            const senhaHash = crypto.createHash('sha256').update(senha).digest('hex');
+
+            const usuario = new Usuario();
+            usuario.nome = nome;
+            usuario.email = email;
+            usuario.senha = senhaHash;
+            usuario.telefone = telefone || null; 
+
+            const resultado = await this.#repository.cadastrar(usuario);
+            
+            if (resultado) {
+                return res.status(201).json({ msg: "Usuário cadastrado com sucesso!" });
+            } else {
+                return res.status(400).json({ erro: "Não foi possível cadastrar o usuário no banco de dados." });
+            }
+
+        } catch (exception) {
+            console.error("Erro no catch do cadastrar:", exception);
+            return res.status(500).json({ erro: "Erro interno no servidor ao cadastrar o usuário." });
         }
-        
-        const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!regexEmail.test(email)) {
-            return res.status(400).json({ erro: "Formato de e-mail inválido. Certifique-se de usar '@' e '.'" });
-        }
-        const usuarios = await this.#repository.listar();
-        const emailJaExiste = usuarios.some(u => u.email === email);
-        if (emailJaExiste) {
-            return res.status(400).json({ erro: "Este email já está cadastrado." });
-        }
-
-        const crypto = await import('crypto'); 
-        const senhaHash = crypto.createHash('sha256').update(senha).digest('hex');
-
-        const usuario = new Usuario();
-        usuario.nome = nome;
-        usuario.email = email;
-        usuario.senha = senhaHash;
-        usuario.telefone = telefone || null; 
-
-        const resultado = await this.#repository.cadastrar(usuario);
-        
-        if (resultado) {
-            return res.status(201).json({ msg: "Usuário cadastrado com sucesso!" });
-        } else {
-            return res.status(400).json({ erro: "Não foi possível cadastrar o usuário no banco de dados." });
-        }
-
-    } catch (exception) {
-        console.error("Erro no catch do cadastrar:", exception);
-        return res.status(500).json({ erro: "Erro interno no servidor ao cadastrar o usuário." });
     }
-}
 
     async cadastrarAdmin(req, res) {
         try {
@@ -74,11 +76,10 @@ export default class UsuarioController {
 
             const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!regexEmail.test(email)) {
-            return res.status(400).json({ erro: "Formato de e-mail inválido. Certifique-se de usar '@' e '.'" });
+                return res.status(400).json({ erro: "Formato de e-mail inválido. Certifique-se de usar '@' e '.'" });
             }
 
-            const usuarios = await this.#repository.listar();
-            const emailJaExiste = usuarios.some(u => u.email === email);
+            const emailJaExiste = await this.#repository.verificarEmailExistente(email);
             if (emailJaExiste) {
                 return res.status(400).json({ erro: "Este e-mail já possui um acesso no sistema." });
             }
@@ -123,6 +124,11 @@ export default class UsuarioController {
                 return res.status(400).json({ erro: "Formato de e-mail inválido. Certifique-se de usar '@' e '.'" });
             }
 
+            const emailJaExiste = await this.#repository.verificarEmailExistente(email, id);
+            if (emailJaExiste) {
+                return res.status(400).json({ erro: "Este e-mail já está em uso por outro usuário." });
+            }
+
             let Usuario = (await import('../entities/usuario.js')).default;
             let usuario = new Usuario();
             usuario.id = id;
@@ -162,6 +168,27 @@ export default class UsuarioController {
         } catch (exception) {
             console.log(exception);
             return res.status(500).json({ erro: "Erro ao inativar o utilizador!" });
+        }
+    }
+
+    async reativar(req, res) {
+        try {
+            let id = req.params.id;
+
+            if (!id) {
+                return res.status(400).json({ erro: "Informe o ID para reativar o utilizador!" });
+            }
+
+            const resultado = await this.#repository.reativar(id);
+            
+            if (resultado) {
+                return res.status(200).json({ msg: "Utilizador reativado com sucesso!" });
+            } else {
+                return res.status(400).json({ erro: "Não foi possível reativar o utilizador!" });
+            }
+        } catch (exception) {
+            console.log(exception);
+            return res.status(500).json({ erro: "Erro ao reativar o utilizador!" });
         }
     }
 }

@@ -17,6 +17,7 @@ router.get("/", auth.validarFuncionario, (req, res) => {
     */
     ctrl.listar(req, res)
 });
+
 router.post("/",  (req, res) => {
     /* #swagger.security = [{
         "bearerAuth": []
@@ -56,6 +57,15 @@ router.put("/:id", auth.validarFuncionario, (req,res) => {
     // #swagger.tags = ['Usuário - FUNCIONARIO']
     // #swagger.summary = "Altera um Usuário"
     ctrl.alterar(req,res);
+});
+
+router.put("/:id/reativar", auth.validarFuncionario, (req, res) => {
+    /* #swagger.security = [{
+        "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Usuário - FUNCIONARIO']
+    // #swagger.summary = "Reativa um Usuário"
+    ctrl.reativar(req, res);
 });
 
 router.delete("/:id", auth.validarFuncionario, (req, res) => {

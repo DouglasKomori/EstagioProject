@@ -13,6 +13,8 @@ export default function GerenciarProdutos() {
   const [sucesso, setSucesso] = useState("");
   const [busca, setBusca] = useState("");
 
+  const [mostrarInativos, setMostrarInativos] = useState(false);
+
   const [id, setId] = useState("");
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -22,9 +24,12 @@ export default function GerenciarProdutos() {
   const [marcaId, setMarcaId] = useState("");
 
   useEffect(() => {
-    carregarProdutos();
     carregarMarcas(); 
   }, []);
+
+  useEffect(() => {
+    carregarProdutos();
+  }, [mostrarInativos]);
 
   const obterToken = () => {
     return localStorage.getItem("token") || "";
@@ -32,12 +37,15 @@ export default function GerenciarProdutos() {
 
   const carregarProdutos = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/produtos`, {
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/produtos${mostrarInativos ? '?inativos=true' : ''}`;
+      const response = await fetch(url, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (response.ok) {
         const data = await response.json();
         setProdutos(data);
+      } else {
+        setProdutos([]);
       }
     } catch (error) {
       console.error("Erro ao carregar produtos", error);
@@ -129,7 +137,7 @@ export default function GerenciarProdutos() {
   };
 
   const excluirProduto = async (idExclusao: string) => {
-    if (!window.confirm("Atenção: Tem certeza que deseja excluir/inativar este produto do estoque?")) return;
+    if (!window.confirm("Atenção: Tem certeza que deseja inativar este produto do estoque?")) return;
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/produtos/${idExclusao}`, {
@@ -145,6 +153,26 @@ export default function GerenciarProdutos() {
       }
     } catch (error) {
       console.error("Erro ao excluir", error);
+    }
+  };
+
+  const reativarProduto = async (idReativacao: string) => {
+    if (!window.confirm("Deseja reativar este produto? Ele voltará a aparecer no sistema de vendas e estoque.")) return;
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/produtos/${idReativacao}/reativar`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+
+      if (response.ok) {
+        carregarProdutos();
+        exibirSucesso("Produto reativado com sucesso!");
+      } else {
+        alert("Não foi possível reativar o produto.");
+      }
+    } catch (error) {
+      console.error("Erro ao reativar", error);
     }
   };
 
@@ -188,19 +216,38 @@ export default function GerenciarProdutos() {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto mb-8 relative">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+      {/* Barra de Pesquisa e Filtro de Inativos */}
+      <div className="max-w-6xl mx-auto mb-8 flex flex-col sm:flex-row gap-4">
+        
+        {/* Input de Busca */}
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Buscar produto pelo nome..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#E4B77D] transition-all shadow-sm"
+          />
         </div>
-        <input
-          type="text"
-          placeholder="Buscar produto pelo nome..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#E4B77D] transition-all shadow-sm"
-        />
+
+        {/* Checkbox de Inativos */}
+        <div className="flex items-center gap-3 px-5 py-3 bg-zinc-900 border border-zinc-800 rounded-lg">
+          <input
+            type="checkbox"
+            id="filtroInativos"
+            checked={mostrarInativos}
+            onChange={(e) => setMostrarInativos(e.target.checked)}
+            className="w-4 h-4 accent-[#E4B77D] cursor-pointer"
+          />
+          <label htmlFor="filtroInativos" className="text-sm text-zinc-300 cursor-pointer select-none">
+            Exibir Inativos
+          </label>
+        </div>
       </div>
       
       <main className="max-w-6xl mx-auto bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-lg">
@@ -224,36 +271,46 @@ export default function GerenciarProdutos() {
                 </tr>
               ) : (
                 produtosFiltrados.map((produto) => (
-                  <tr key={produto.id} className="hover:bg-zinc-800/50 transition-colors">
+                  <tr key={produto.id} className={`transition-colors ${produto.ativo === 0 ? 'bg-red-950/10 hover:bg-red-950/20' : 'hover:bg-zinc-800/50'}`}>
                     <td className="p-4 text-zinc-500 text-center text-sm font-mono">
                       #{produto.id}
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-md bg-zinc-800 flex items-center justify-center text-[#E4B77D] border border-zinc-700 flex-shrink-0">
+                        <div className={`w-10 h-10 rounded-md bg-zinc-800 flex items-center justify-center border border-zinc-700 flex-shrink-0 ${produto.ativo === 0 ? 'text-zinc-600' : 'text-[#E4B77D]'}`}>
                           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                           </svg>
                         </div>
                         <div>
-                          <span className="font-bold text-white block">{produto.nome}</span>
-                          <span className="text-xs text-zinc-400 font-medium tracking-wide uppercase">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-bold block ${produto.ativo === 0 ? 'text-zinc-500 line-through' : 'text-white'}`}>
+                              {produto.nome}
+                            </span>
+                            {/* Selo Visual de Inativo */}
+                            {produto.ativo === 0 && (
+                              <span className="text-[10px] uppercase font-bold bg-red-900/40 text-red-400 px-2 py-0.5 rounded-md border border-red-900/50">
+                                Inativo
+                              </span>
+                            )}
+                          </div>
+                          <span className={`text-xs font-medium tracking-wide uppercase ${produto.ativo === 0 ? 'text-zinc-600' : 'text-zinc-400'}`}>
                             {obterNomeMarca(produto.marcaId)}
                           </span>
                         </div>
                       </div>
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`px-3 py-1 rounded-full text-sm font-bold ${produto.quantidadeEstoque > 5 ? 'bg-green-950/50 text-green-400 border border-green-900' : 'bg-red-950/50 text-red-400 border border-red-900'}`}>
+                      <span className={`px-3 py-1 rounded-full text-sm font-bold ${produto.ativo === 0 ? 'bg-zinc-900 text-zinc-500 border border-zinc-700' : (produto.quantidadeEstoque > 5 ? 'bg-green-950/50 text-green-400 border border-green-900' : 'bg-red-950/50 text-red-400 border border-red-900')}`}>
                         {produto.quantidadeEstoque} un
                       </span>
                     </td>
                     
                     <td className="p-4 text-right">
-                      <div className="text-[10px] font-semibold tracking-widest text-zinc-500 uppercase mb-0.5">
+                      <div className={`text-[10px] font-semibold tracking-widest uppercase mb-0.5 ${produto.ativo === 0 ? 'text-zinc-600' : 'text-zinc-500'}`}>
                         Custo: R$ {Number(produto.precoCusto).toFixed(2).replace('.', ',')}
                       </div>
-                      <div className="text-md font-bold text-[#E4B77D]">
+                      <div className={`text-md font-bold ${produto.ativo === 0 ? 'text-zinc-500' : 'text-[#E4B77D]'}`}>
                         R$ {Number(produto.precoVenda).toFixed(2).replace('.', ',')}
                       </div>
                     </td>
@@ -266,12 +323,24 @@ export default function GerenciarProdutos() {
                         >
                           Editar
                         </button>
-                        <button 
-                          onClick={() => excluirProduto(produto.id)}
-                          className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium"
-                        >
-                          Inativar
-                        </button>
+                        
+                        {/* Lógica Condicional: Se ativo=1 mostra inativar, se ativo=0 mostra reativar */}
+                        {produto.ativo !== 0 ? (
+                          <button 
+                            onClick={() => excluirProduto(produto.id)}
+                            className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium"
+                          >
+                            Inativar
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => reativarProduto(produto.id)}
+                            className="text-sm text-green-500 hover:text-green-400 transition-colors font-medium"
+                          >
+                            Reativar
+                          </button>
+                        )}
+
                       </div>
                     </td>
                   </tr>

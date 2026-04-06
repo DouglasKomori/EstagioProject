@@ -7,9 +7,13 @@ export default class marcaRepository{
     constructor(){
         this.#banco = new Database();
     }
-
-    async listar(){
-        let sql = "select * from marca where ativo = 1";
+    
+    async listar(incluirInativos = false){
+        let sql = "select * from marca";
+        
+        if (!incluirInativos) {
+            sql += " where ativo = 1";
+        }
 
         let rows = await this.#banco.ExecutaComando(sql);
         let lista = [];
@@ -46,6 +50,13 @@ export default class marcaRepository{
         return result;
     }
 
+    async reativar(id){
+        let sql = "update marca set ativo = 1 where id = ?";
+        let params = [id];
+        let result = await this.#banco.ExecutaComandoNonQuery(sql, params);
+        return result;
+    }
+
     async consultarPorId(id){
         let sql = "select * from marca where id = ? and ativo = 1";
         let params = [id];
@@ -62,4 +73,10 @@ export default class marcaRepository{
         return null;
     }
 
-}  
+    async verificarNomeExistente(nome, idIgnorar = 0) {
+        let sql = "SELECT id FROM marca WHERE LOWER(nome) = LOWER(?) AND id != ?";
+        let rows = await this.#banco.ExecutaComando(sql, [nome, idIgnorar]);
+        
+        return rows.length > 0; 
+    }
+}

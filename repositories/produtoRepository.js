@@ -8,8 +8,12 @@ export default class produtoRepository {
         this.#banco = new Database();
     }
 
-    async listar(){
-        let sql = "select * from produto where ativo = 1";
+    async listar(incluirInativos = false){
+        let sql = "select * from produto";
+        
+        if (!incluirInativos) {
+            sql += " where ativo = 1";
+        }
 
         let rows = await this.#banco.ExecutaComando(sql);
         let lista = [];
@@ -27,6 +31,12 @@ export default class produtoRepository {
             lista.push(p);
         }
         return lista;
+    }
+
+    async verificarNomeExistente(nome, idIgnorar = 0) {
+        let sql = "SELECT id FROM produto WHERE LOWER(nome) = LOWER(?) AND id != ?";
+        let rows = await this.#banco.ExecutaComando(sql, [nome, idIgnorar]);
+        return rows.length > 0; 
     }
 
     async cadastrar(produto){
@@ -52,6 +62,13 @@ export default class produtoRepository {
         return result;
     }
 
+    async reativar(id){
+        let sql = "update produto set ativo = 1 where id = ?";
+        let params = [id];
+        let result = await this.#banco.ExecutaComandoNonQuery(sql, params);
+        return result;
+    }
+
     async consultarPorId(id){
         let sql = "select * from produto where id = ? and ativo = 1";
         let params = [id];
@@ -70,5 +87,4 @@ export default class produtoRepository {
         }
         return null;
     }
-
 }

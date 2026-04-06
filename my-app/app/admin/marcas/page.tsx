@@ -10,26 +10,35 @@ export default function GerenciarMarcas() {
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [busca, setBusca] = useState("");
+  
+  // NOVO: Estado para controlar o filtro de inativos
+  const [mostrarInativos, setMostrarInativos] = useState(false);
 
   const [id, setId] = useState("");
   const [nome, setNome] = useState("");
 
+  // NOVO: Atualizamos o useEffect para recarregar sempre que o filtro mudar
   useEffect(() => {
     carregarMarcas();
-  }, []);
+  }, [mostrarInativos]);
 
   const obterToken = () => {
     return localStorage.getItem("token") || "";
   };
 
+  // ATUALIZADO: Agora envia o parâmetro ?inativos=true se o checkbox estiver marcado
   const carregarMarcas = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/marcas`, {
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/marcas${mostrarInativos ? '?inativos=true' : ''}`;
+      const response = await fetch(url, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (response.ok) {
         const data = await response.json();
         setMarcas(data);
+      } else {
+        // Se a API retornar 404 (Nenhuma marca), limpamos a lista
+        setMarcas([]);
       }
     } catch (error) {
       console.error("Erro ao carregar marcas", error);
@@ -90,7 +99,7 @@ export default function GerenciarMarcas() {
   };
 
   const excluirMarca = async (idExclusao: string) => {
-    if (!window.confirm("Atenção: Tem certeza que deseja excluir/inativar esta marca? Produtos vinculados a ela poderão ser afetados.")) return;
+    if (!window.confirm("Atenção: Tem certeza que deseja inativar esta marca?")) return;
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/marcas/${idExclusao}`, {
@@ -106,6 +115,26 @@ export default function GerenciarMarcas() {
       }
     } catch (error) {
       console.error("Erro ao excluir", error);
+    }
+  };
+
+  const reativarMarca = async (idReativacao: string) => {
+    if (!window.confirm("Deseja reativar esta marca? Ela voltará a aparecer no sistema.")) return;
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/marcas/${idReativacao}/reativar`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+
+      if (response.ok) {
+        carregarMarcas();
+        exibirSucesso("Marca reativada com sucesso!");
+      } else {
+        alert("Não foi possível reativar a marca.");
+      }
+    } catch (error) {
+      console.error("Erro ao reativar", error);
     }
   };
 
@@ -143,20 +172,39 @@ export default function GerenciarMarcas() {
         </div>
       )}
 
-      {/* Barra de Pesquisa */}
-      <div className="max-w-6xl mx-auto mb-8 relative">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+      {/* Barra de Pesquisa e Filtro */}
+      <div className="max-w-6xl mx-auto mb-8 flex flex-col sm:flex-row gap-4">
+        
+        {/* Input de Busca */}
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Buscar marca pelo nome..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#E4B77D] transition-all shadow-sm"
+          />
         </div>
-        <input
-          type="text"
-          placeholder="Buscar marca pelo nome..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#E4B77D] transition-all shadow-sm"
-        />
+
+        {/* Checkbox de Inativos */}
+        <div className="flex items-center gap-3 px-5 py-3 bg-zinc-900 border border-zinc-800 rounded-lg">
+          <input
+            type="checkbox"
+            id="filtroInativos"
+            checked={mostrarInativos}
+            onChange={(e) => setMostrarInativos(e.target.checked)}
+            className="w-4 h-4 accent-[#E4B77D] cursor-pointer"
+          />
+          <label htmlFor="filtroInativos" className="text-sm text-zinc-300 cursor-pointer select-none">
+            Exibir Inativos
+          </label>
+        </div>
+
       </div>
       
       {/* Tabela de Dados */}
@@ -179,14 +227,21 @@ export default function GerenciarMarcas() {
                 </tr>
               ) : (
                 marcasFiltradas.map((marca) => (
-                  <tr key={marca.id} className="hover:bg-zinc-800/50 transition-colors">
+                  <tr key={marca.id} className={`transition-colors ${marca.ativo === 0 ? 'bg-red-950/10 hover:bg-red-950/20' : 'hover:bg-zinc-800/50'}`}>
                     <td className="p-4 text-zinc-500 text-center text-sm font-mono">
                       #{marca.id}
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-
-                        <span className="font-bold text-white whitespace-nowrap">{marca.nome}</span>
+                        <span className={`font-bold whitespace-nowrap ${marca.ativo === 0 ? 'text-zinc-500 line-through' : 'text-white'}`}>
+                          {marca.nome}
+                        </span>
+                        {/* Selo Visual de Inativo */}
+                        {marca.ativo === 0 && (
+                          <span className="text-xs bg-red-900/40 text-red-400 px-2 py-0.5 rounded-md border border-red-900/50">
+                            Inativo
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="p-4 text-right whitespace-nowrap">
@@ -197,12 +252,24 @@ export default function GerenciarMarcas() {
                         >
                           Editar
                         </button>
-                        <button 
-                          onClick={() => excluirMarca(marca.id)}
-                          className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium"
-                        >
-                          Inativar
-                        </button>
+                        
+                        {/* Lógica Condicional: Se ativo=1 mostra inativar, se ativo=0 mostra reativar */}
+                        {marca.ativo !== 0 ? (
+                          <button 
+                            onClick={() => excluirMarca(marca.id)}
+                            className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium"
+                          >
+                            Inativar
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => reativarMarca(marca.id)}
+                            className="text-sm text-green-500 hover:text-green-400 transition-colors font-medium"
+                          >
+                            Reativar
+                          </button>
+                        )}
+                        
                       </div>
                     </td>
                   </tr>

@@ -9,7 +9,9 @@ export default class MarcaController{
 
     async listar(req, res){
         try{
-            let lista = await this.#repoMarca.listar();
+            const incluirInativos = req.query.inativos === 'true';
+            let lista = await this.#repoMarca.listar(incluirInativos);
+            
             if(lista.length === 0){
                 return res.status(404).json({msg: "Nenhuma marca encontrada!"});
             } else {
@@ -28,6 +30,13 @@ export default class MarcaController{
             if(!nome){
                 return res.status(400).json({msg: "Informe o nome para cadastrar uma marca!"});
             }
+
+            // Verifica se o nome já existe
+            const existe = await this.#repoMarca.verificarNomeExistente(nome);
+            if (existe) {
+                return res.status(400).json({msg: "Já existe uma marca cadastrada com este nome!"});
+            }
+
             const result = await this.#repoMarca.cadastrar({nome});
             if(result){
                 return res.status(201).json({msg: "Marca cadastrada com sucesso!"});
@@ -49,6 +58,12 @@ export default class MarcaController{
             if(!id || !nome){
                 return res.status(400).json({msg: "Informe id e nome para alterar uma marca!"});
             }
+
+            const existe = await this.#repoMarca.verificarNomeExistente(nome, id);
+            if (existe) {
+                return res.status(400).json({msg: "Este nome já está sendo usado por outra marca!"});
+            }
+
             const result = await this.#repoMarca.alterar({id, nome});
             if(result){
                 return res.status(200).json({msg: "Marca alterada com sucesso!"});
@@ -83,7 +98,27 @@ export default class MarcaController{
         }
     }
 
-async consultarPorId(req, res){
+    async reativar(req,res){
+        try{
+            let id = req.params.id;
+            if(!id){
+                return res.status(400).json({msg: "Informe o id para reativar uma marca!"});
+            }
+            const result = await this.#repoMarca.reativar(id);
+            if(result){
+                return res.status(200).json({msg: "Marca reativada com sucesso!"});
+            }
+            else{
+                return res.status(400).json({msg: "Não foi possível reativar a marca!"});
+            }
+        }
+        catch(exception){
+            console.log(exception);
+            return res.status(500).json({msg: "Erro ao reativar a marca!"});
+        }
+    }
+
+    async consultarPorId(req, res){
         try{
             let id = req.params.id;
             if(!id){
@@ -103,5 +138,4 @@ async consultarPorId(req, res){
             return res.status(500).json({msg: "Erro ao consultar a marca!"});
         }
     }
-
 }
