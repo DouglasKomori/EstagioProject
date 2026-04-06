@@ -96,7 +96,7 @@ export default function AgendaAdmin() {
       const dia = String(dataSelecionada.getDate()).padStart(2, '0');
       const dataFormatada = `${ano}-${mes}-${dia}`;
 
-      const response = await fetch(`http://localhost:5000/agendamentos?data=${dataFormatada}`, {
+      const response = await fetch(`process.env.NEXT_PUBLIC_API_URL/agendamentos?data=${dataFormatada}`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
 
@@ -109,13 +109,13 @@ export default function AgendaAdmin() {
   const carregarDadosParaModal = async () => {
     try {
       const headers = { "Authorization": `Bearer ${obterToken()}` };
-      const resClientes = await fetch("http://localhost:5000/usuario", { headers });
+      const resClientes = await fetch("process.env.NEXT_PUBLIC_API_URL/usuario", { headers });
       if(resClientes.ok) setListaClientes(await resClientes.json());
 
-      const resPro = await fetch("http://localhost:5000/pessoas/profissionais", { headers });
+      const resPro = await fetch("process.env.NEXT_PUBLIC_API_URL/pessoas/profissionais", { headers });
       if(resPro.ok) setListaProfissionais(await resPro.json());
 
-      const resServicos = await fetch("http://localhost:5000/servicos", { headers });
+      const resServicos = await fetch("process.env.NEXT_PUBLIC_API_URL/servicos", { headers });
       if(resServicos.ok) setListaServicos(await resServicos.json());
     } catch (error) { console.error("Erro ao carregar listas do modal", error); }
   };
@@ -123,7 +123,7 @@ export default function AgendaAdmin() {
   const concluirAgendamento = async (id: number) => {
     if (!window.confirm("Deseja marcar este agendamento como CONCLUÍDO?")) return;
     try {
-      const response = await fetch(`http://localhost:5000/agendamentos/${id}/status`, {
+      const response = await fetch(`process.env.NEXT_PUBLIC_API_URL/agendamentos/${id}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${obterToken()}` },
         body: JSON.stringify({ status: "CONCLUIDO" })
@@ -136,7 +136,7 @@ export default function AgendaAdmin() {
   const cancelarAgendamento = async (id: number) => {
     if (!window.confirm("Atenção: Deseja realmente CANCELAR este agendamento?")) return;
     try {
-      const response = await fetch(`http://localhost:5000/agendamentos/${id}/cancelar`, {
+      const response = await fetch(`process.env.NEXT_PUBLIC_API_URL/agendamentos/${id}/cancelar`, {
         method: "PUT", headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       const data = await response.json();
@@ -190,7 +190,7 @@ export default function AgendaAdmin() {
     };
 
     try {
-      const response = await fetch("http://localhost:5000/agendamentos", {
+      const response = await fetch("process.env.NEXT_PUBLIC_API_URL/agendamentos", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${obterToken()}` },
         body: JSON.stringify(payload)

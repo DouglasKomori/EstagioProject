@@ -27,7 +27,7 @@ export default function GerenciarClientes() {
 
   const carregarClientes = async () => {
     try {
-      const response = await fetch("http://localhost:5000/usuario", {
+      const response = await fetch("process.env.NEXT_PUBLIC_API_URL/usuario", {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (response.ok) {
@@ -80,7 +80,7 @@ export default function GerenciarClientes() {
     setErro("");
 
     const metodo = id ? "PUT" : "POST";
-    const url = id ? `http://localhost:5000/usuario/${id}` : "http://localhost:5000/usuario";
+    const url = id ? `process.env.NEXT_PUBLIC_API_URL/usuario/${id}` : "process.env.NEXT_PUBLIC_API_URL/usuario";
 
     const payload: any = { nome, email, telefone };
     if (!id && senha) payload.senha = senha;
@@ -115,7 +115,7 @@ export default function GerenciarClientes() {
     if (!window.confirm("Atenção: Tem certeza que deseja excluir/inativar este cliente do sistema?")) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/usuario/${idExclusao}`, {
+      const response = await fetch(`process.env.NEXT_PUBLIC_API_URL/usuario/${idExclusao}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });

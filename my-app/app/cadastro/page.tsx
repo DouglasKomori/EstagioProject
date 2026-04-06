@@ -41,7 +41,7 @@ export default function Cadastro() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/usuario", {
+      const response = await fetch("process.env.NEXT_PUBLIC_API_URL/usuario", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
