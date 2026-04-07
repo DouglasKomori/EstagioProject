@@ -12,6 +12,7 @@ import produtoRoute from './routes/produtoRoute.js';
 import marcaRoute from './routes/marcaRoute.js';
 import pessoaRoute from './routes/pessoaRoute.js';
 import agendaRoute from './routes/agendaRoute.js';
+import bloqueioRoute from './routes/bloqueioRoute.js';
 
 const require = createRequire(import.meta.url);
 const outputJson = require("./swaggerOutput.json");
@@ -36,6 +37,7 @@ server.use("/produtos", produtoRoute);
 server.use("/marcas", marcaRoute);
 server.use("/pessoas", pessoaRoute);
 server.use("/agendamentos", agendaRoute);
+server.use("/bloqueios", bloqueioRoute);
 
 server.listen(PORT, function() {
     console.log(`backend em funcionamento na porta ${PORT}!`);

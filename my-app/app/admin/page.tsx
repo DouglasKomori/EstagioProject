@@ -116,6 +116,16 @@ export default function AdminDashboard() {
             <p className="text-zinc-400 mt-2 text-sm">Cadastro de barbeiros (PF/PJ).</p>
           </Link>
 
+          <Link href="/admin/bloqueios" className="group p-6 bg-red-950/10 border border-red-900/30 rounded-xl hover:border-red-500/50 hover:bg-red-950/20 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg">
+          <div className="p-3 bg-red-950/50 rounded-lg mb-4 text-red-500 group-hover:scale-110 transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-white group-hover:text-red-400 transition-colors">Bloqueios</h3>
+          <p className="text-zinc-400 mt-2 text-sm">Folgas, férias e atestados médicos dos barbeiros.</p>
+        </Link>
+
         </div>
       </main>
     </div>

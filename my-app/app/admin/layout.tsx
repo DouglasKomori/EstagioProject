@@ -6,12 +6,11 @@ import Image from "next/image";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname(); // Ajuda a fechar o menu quando mudamos de tela
+  const pathname = usePathname(); 
   
   const [autorizado, setAutorizado] = useState(false);
   const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
   
-  // ESTADO DO MENU GLOBAL
   const [menuAberto, setMenuAberto] = useState(false);
 
   useEffect(() => {
@@ -25,7 +24,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const usuario = JSON.parse(usuarioString);
     
-    // Se não for ADMIN/FUNCIONARIO, expulsa do painel
     if (usuario.perfil === "CLIENTE" || !usuario.perfil) {
       router.push("/"); 
       return;
@@ -35,7 +33,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setAutorizado(true);
   }, [router]);
 
-  // EFEITO: Fecha o menu automaticamente sempre que o usuário clica em um link e muda de página
   useEffect(() => {
     setMenuAberto(false);
   }, [pathname]);
@@ -58,7 +55,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen w-full bg-zinc-950 text-zinc-50 font-sans flex flex-col overflow-x-hidden relative">
       
-      {/* 1. OVERLAY ESCURO (Quando o menu abre) */}
+      {/* 1. OVERLAY ESCURO */}
       {menuAberto && (
         <div 
           className="fixed inset-0 bg-black/70 z-40 transition-opacity backdrop-blur-sm"
@@ -130,24 +127,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </svg>
               <span className="font-medium">Clientes</span>
             </Link>
+
+            <Link href="/admin/pessoas" className="flex items-center gap-4 px-4 py-3 rounded-lg text-zinc-300 hover:text-[#E4B77D] hover:bg-zinc-900/50 transition-all group">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500 group-hover:text-[#E4B77D] transition-colors">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+              </svg>
+              <span className="font-medium">Pessoas</span>
+            </Link>
+
+            <div className="h-px w-full bg-zinc-900 my-2"></div>
+            <Link href="/admin/bloqueios" className="flex items-center gap-4 px-4 py-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-950/20 transition-all group">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-red-500 group-hover:text-red-400 transition-colors">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span className="font-medium">Bloqueios / Folgas</span>
+            </Link>
+            {/* ======================================= */}
+
           </nav>
 
-          {/* Rodapé do Menu */}
           <div className="mt-auto pt-8 border-t border-zinc-900 text-sm text-zinc-500 text-center">
             <p>© 2026 Victor Uematsu Barbearia</p>
           </div>
         </div>
       </div>
 
-      {/* 3. CABEÇALHO SUPERIOR GLOBAL (Onde fica o botão do Hambúrguer) */}
       <header className="flex items-center justify-between px-6 md:px-8 py-4 border-b border-zinc-900 shrink-0 sticky top-0 bg-black/80 backdrop-blur-md z-30">
-        
-        {/* Lado Esquerdo: Ícone + Título */}
         <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setMenuAberto(true)}
-            className="text-zinc-300 hover:text-[#E4B77D] transition-colors"
-          >
+          <button onClick={() => setMenuAberto(true)} className="text-zinc-300 hover:text-[#E4B77D] transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
@@ -157,21 +164,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
         
-        {/* Lado Direito: Perfil + Logout */}
         <div className="flex items-center gap-4">
           <span className="text-sm text-zinc-400 hidden sm:block">
             Olá, <strong className="text-[#E4B77D] font-medium">{usuarioLogado?.nome.split(" ")[0]}</strong>
           </span>
-          <button 
-            onClick={handleLogout} 
-            className="px-4 py-2 text-sm font-bold bg-red-950/50 text-red-500 rounded-md hover:bg-red-900 hover:text-red-100 transition-colors border border-red-900/50"
-          >
+          <button onClick={handleLogout} className="px-4 py-2 text-sm font-bold bg-red-950/50 text-red-500 rounded-md hover:bg-red-900 hover:text-red-100 transition-colors border border-red-900/50">
             Sair
           </button>
         </div>
       </header>
 
-      {/* 4. CONTEÚDO DAS PÁGINAS (Isso é o que vai mudar quando você clicar no menu) */}
       <div className="flex-1 w-full relative">
         {children}
       </div>
