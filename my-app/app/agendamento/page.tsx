@@ -14,6 +14,11 @@ export default function AgendamentoCliente() {
   const [usuarioNome, setUsuarioNome] = useState("");
   const [horariosOcupados, setHorariosOcupados] = useState<string[]>([]);
 
+  // === NOVO: LÓGICA DINÂMICA ===
+  const [disponibilidades, setDisponibilidades] = useState<any[]>([]);
+  const [horariosDinamicos, setHorariosDinamicos] = useState<string[]>([]);
+  // ==============================
+
   // Estados do Formulário de Novo Agendamento
   const [dataSelecionada, setDataSelecionada] = useState(new Date());
   const [dataVisualizacao, setDataVisualizacao] = useState(new Date());
@@ -23,16 +28,9 @@ export default function AgendamentoCliente() {
   const [observacao, setObservacao] = useState("");
   const [erroForm, setErroForm] = useState("");
 
-  // Grade de Horários da Barbearia
-  const horarios = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", 
-    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00"
-  ];
-
   const obterToken = () => localStorage.getItem("token") || "";
 
-// 1. O seu useEffect original (Roda APENAS UMA VEZ na montagem da tela)
+  // 1. Roda APENAS UMA VEZ na montagem da tela
   useEffect(() => {
     const usuarioString = localStorage.getItem("usuario");
     if (!usuarioString || !obterToken()) {
@@ -43,33 +41,14 @@ export default function AgendamentoCliente() {
     carregarDadosIniciais();
   }, []);
 
-  // 2. O NOVO useEffect do Radar (Roda SEMPRE que o dia ou o barbeiro mudar)
+  // 2. Roda SEMPRE que o dia ou o barbeiro mudar
   useEffect(() => {
-    const buscarHorariosOcupados = async () => {
-      // Se não escolheu o barbeiro ainda, limpa as horas e não faz a busca no banco
-      if (!profissionalSelecionado) {
-        setHorariosOcupados([]);
-        return;
-      }
-
-      const ano = dataSelecionada.getFullYear();
-      const mes = String(dataSelecionada.getMonth() + 1).padStart(2, '0');
-      const dia = String(dataSelecionada.getDate()).padStart(2, '0');
-      const dataFormatada = `${ano}-${mes}-${dia}`;
-
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/ocupados?data=${dataFormatada}&profissionalId=${profissionalSelecionado}`, {
-          headers: { "Authorization": `Bearer ${obterToken()}` }
-        });
-        if (res.ok) {
-          setHorariosOcupados(await res.json());
-        }
-      } catch (e) { 
-        console.error("Erro no radar de horários"); 
-      }
-    };
-
-    buscarHorariosOcupados();
+    if (profissionalSelecionado) {
+      buscarEscalaEHorariosOcupados();
+    } else {
+      setHorariosOcupados([]);
+      setHorariosDinamicos([]);
+    }
   }, [dataSelecionada, profissionalSelecionado]);
 
   const carregarDadosIniciais = async () => {
@@ -77,34 +56,78 @@ export default function AgendamentoCliente() {
     try {
       const headers = { "Authorization": `Bearer ${obterToken()}` };
       
-      // Busca Profissionais
       const resPro = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/profissionais`, { headers });
       if(resPro.ok) setListaProfissionais(await resPro.json());
 
-      // Busca Serviços
       const resServicos = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos`, { headers });
       if(resServicos.ok) setListaServicos(await resServicos.json());
 
-      // Busca Agendamentos do Cliente (Precisaremos criar essa rota no Back-end no próximo passo!)
       const resAgendamentos = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/meus`, { headers });
       if(resAgendamentos.ok) setMeusAgendamentos(await resAgendamentos.json());
       
-    } catch (error) {
-      console.error("Erro ao carregar dados", error);
-    } finally {
-      setLoading(false);
+    } catch (error) { console.error("Erro ao carregar dados", error); } 
+    finally { setLoading(false); }
+  };
+
+  const buscarEscalaEHorariosOcupados = async () => {
+    const ano = dataSelecionada.getFullYear();
+    const mes = String(dataSelecionada.getMonth() + 1).padStart(2, '0');
+    const dia = String(dataSelecionada.getDate()).padStart(2, '0');
+    const dataFormatada = `${ano}-${mes}-${dia}`;
+
+    try {
+      // Busca horários que já estão agendados ou bloqueados
+      const resOcupados = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/ocupados?data=${dataFormatada}&profissionalId=${profissionalSelecionado}`, {
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+      if (resOcupados.ok) setHorariosOcupados(await resOcupados.json());
+
+      // Busca a disponibilidade geral do barbeiro
+      const resDisp = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/disponibilidade?profissionalId=${profissionalSelecionado}`, {
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+      if (resDisp.ok) {
+        const disp = await resDisp.json();
+        setDisponibilidades(disp);
+        gerarHorariosDinamicos(dataSelecionada, disp);
+      }
+    } catch (e) { 
+      console.error("Erro ao buscar dados dinâmicos"); 
     }
   };
 
-  // ==========================================
-  // LÓGICA DE CANCELAMENTO (REGRA DAS 2 HORAS)
-  // ==========================================
-  
+  const gerarHorariosDinamicos = (dataReferencia: Date, dispProfissional: any[]) => {
+    const diaSemana = dataReferencia.getDay();
+    const turnosDoDia = dispProfissional.filter(d => d.diaSemana === diaSemana);
+    
+    let slotsGerados: string[] = [];
+
+    turnosDoDia.forEach(turno => {
+      let [hInicio, mInicio] = turno.horaInicio.split(':').map(Number);
+      let [hFim, mFim] = turno.horaFim.split(':').map(Number);
+
+      let dataAtual = new Date();
+      dataAtual.setHours(hInicio, mInicio, 0, 0);
+
+      let dataFimTurno = new Date();
+      dataFimTurno.setHours(hFim, mFim, 0, 0);
+
+      while (dataAtual < dataFimTurno) {
+        slotsGerados.push(dataAtual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+        dataAtual.setMinutes(dataAtual.getMinutes() + 30);
+      }
+    });
+
+    setHorariosDinamicos([...new Set(slotsGerados)].sort());
+    setHoraSelecionada(""); // Reseta a seleção quando troca de dia
+  };
+
+
   const verificarPodeCancelar = (dataHoraISO: string) => {
     const agora = new Date();
     const dataAgendamento = new Date(dataHoraISO);
     const diferencaMinutos = (dataAgendamento.getTime() - agora.getTime()) / (1000 * 60);
-    return diferencaMinutos >= 120; // Só retorna true se faltar 2h ou mais
+    return diferencaMinutos >= 120; 
   };
 
   const cancelarAgendamento = async (id: number) => {
@@ -119,18 +142,13 @@ export default function AgendamentoCliente() {
       
       if (response.ok) {
         alert("Agendamento cancelado com sucesso!");
-        carregarDadosIniciais(); // Recarrega a lista
+        carregarDadosIniciais(); 
+        if (profissionalSelecionado) buscarEscalaEHorariosOcupados(); // Atualiza a grade se estiver aberta
       } else {
         alert(data.msg || "Erro ao cancelar.");
       }
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   };
-
-  // ==========================================
-  // LÓGICA DE NOVO AGENDAMENTO
-  // ==========================================
 
   const handleCheckboxServico = (idServico: number, checked: boolean) => {
     if (checked) setServicosSelecionados([...servicosSelecionados, idServico]);
@@ -182,11 +200,11 @@ export default function AgendamentoCliente() {
       const data = await response.json();
       if (response.ok) {
         alert("Agendamento realizado com sucesso! Te esperamos na barbearia.");
-        // Limpa o formulário
         setHoraSelecionada("");
         setServicosSelecionados([]);
         setObservacao("");
         carregarDadosIniciais();
+        buscarEscalaEHorariosOcupados();
       } else {
         setErroForm(data.msg || "Erro ao agendar.");
       }
@@ -197,7 +215,6 @@ export default function AgendamentoCliente() {
     }
   };
 
-  // Funções de formatação e Calendário
   const formatarDataTela = (isoString: string) => {
     const data = new Date(isoString);
     return data.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' });
@@ -220,7 +237,7 @@ export default function AgendamentoCliente() {
     for (let i = 1; i <= totalDias; i++) {
       const dataDesteDia = new Date(ano, mes, i);
       const isSelecionado = dataDesteDia.toDateString() === dataSelecionada.toDateString();
-      const isPassado = dataDesteDia < hoje; // Impede agendar no passado
+      const isPassado = dataDesteDia < hoje;
 
       dias.push(
         <button
@@ -246,7 +263,6 @@ export default function AgendamentoCliente() {
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-8 font-sans">
       
-      {/* NAVBAR SIMPLES */}
       <header className="flex justify-between items-center max-w-7xl mx-auto mb-10 border-b border-zinc-900 pb-6">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">
@@ -261,7 +277,6 @@ export default function AgendamentoCliente() {
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10">
         
-        {/* COLUNA ESQUERDA: MEUS AGENDAMENTOS */}
         <section className="lg:col-span-5 flex flex-col gap-6">
           <h2 className="text-xl font-bold flex items-center gap-2 border-b border-zinc-900 pb-3">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-[#E4B77D]"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -280,7 +295,6 @@ export default function AgendamentoCliente() {
                 
                 return (
                   <div key={ag.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-lg relative overflow-hidden group">
-                    {/* Faixa lateral indicando status */}
                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${ag.status === 'AGENDADO' ? 'bg-blue-500' : ag.status === 'CONCLUIDO' ? 'bg-green-500' : 'bg-red-500'}`}></div>
                     
                     <div className="flex justify-between items-start mb-3 pl-3">
@@ -305,14 +319,10 @@ export default function AgendamentoCliente() {
                       </p>
                     </div>
 
-                    {/* LÓGICA DO BOTÃO CANCELAR */}
                     {ag.status === 'AGENDADO' && (
                       <div className="mt-5 pt-4 border-t border-zinc-800/50 pl-3">
                         {podeCancelar ? (
-                          <button 
-                            onClick={() => cancelarAgendamento(ag.id)}
-                            className="text-sm text-red-400 hover:text-red-300 font-medium transition-colors"
-                          >
+                          <button onClick={() => cancelarAgendamento(ag.id)} className="text-sm text-red-400 hover:text-red-300 font-medium transition-colors">
                             Cancelar Agendamento
                           </button>
                         ) : (
@@ -330,7 +340,6 @@ export default function AgendamentoCliente() {
           </div>
         </section>
 
-        {/* COLUNA DIREITA: NOVO AGENDAMENTO */}
         <section className="lg:col-span-7">
           <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 md:p-8 shadow-2xl relative">
             <h2 className="text-2xl font-bold text-white mb-6">Agendar Novo Horário</h2>
@@ -338,15 +347,14 @@ export default function AgendamentoCliente() {
             <form onSubmit={salvarAgendamento} className="flex flex-col gap-8">
               {erroForm && <div className="bg-red-950/40 border border-red-900 text-red-400 p-3 rounded-lg text-sm">{erroForm}</div>}
 
-              {/* PASSO 1: Profissional e Serviços */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">1. Escolha o Barbeiro</label>
                   <select 
                     value={profissionalSelecionado} onChange={(e) => setProfissionalSelecionado(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-white focus:outline-none focus:border-[#E4B77D] transition-colors appearance-none"
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-white focus:outline-none focus:border-[#E4B77D] transition-colors appearance-none cursor-pointer"
                   >
-                    <option value="" disabled>Qualquer profissional...</option>
+                    <option value="" disabled>Selecione um profissional...</option>
                     {listaProfissionais.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                   </select>
                 </div>
@@ -372,10 +380,7 @@ export default function AgendamentoCliente() {
                 </div>
               </div>
 
-              {/* PASSO 2: Calendário e Horário */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-zinc-900 pt-6">
-                
-                {/* Calendário */}
                 <div>
                   <label className="block text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">3. Escolha o Dia</label>
                   <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
@@ -391,20 +396,21 @@ export default function AgendamentoCliente() {
                   </div>
                 </div>
 
-{/* Grade de Horas Atualizada */}
                 <div>
-                  <label className="block text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">
-                    4. Escolha o Horário
-                  </label>
+                  <label className="block text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">4. Escolha o Horário</label>
                   
                   {!profissionalSelecionado ? (
                     <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 text-center text-sm text-zinc-500">
-                      Selecione um profissional primeiro para ver os horários disponíveis.
+                      Selecione um barbeiro para ver os horários disponíveis.
+                    </div>
+                  ) : horariosDinamicos.length === 0 ? (
+                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 text-center">
+                      <p className="text-zinc-400 text-sm font-medium">Dia de Folga</p>
+                      <p className="text-zinc-600 text-xs mt-1">O barbeiro não atende neste dia.</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-3 gap-2 max-h-[280px] overflow-y-auto pr-2 custom-scrollbar">
-                      {horarios.map(hora => {
-                        // 1. Bloqueia horas do passado no dia de hoje
+                      {horariosDinamicos.map(hora => {
                         const hoje = new Date();
                         const isHoje = dataSelecionada.toDateString() === hoje.toDateString();
                         const [h, m] = hora.split(':').map(Number);
@@ -416,10 +422,7 @@ export default function AgendamentoCliente() {
                           }
                         }
 
-                        // 2. Bloqueia horas que o Radar do Back-end avisou que estão ocupadas
                         const isOcupado = horariosOcupados.includes(hora);
-
-                        // 3. Trava final
                         const isDesabilitado = isPassado || isOcupado;
 
                         return (
@@ -445,7 +448,6 @@ export default function AgendamentoCliente() {
                 </div>
               </div>
 
-              {/* PASSO 3: Resumo e Confirmação */}
               <div className="bg-zinc-900/50 border border-[#E4B77D]/30 rounded-xl p-5 mt-2 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="flex flex-col gap-1 w-full sm:w-auto">
                   <span className="text-zinc-400 text-sm">Resumo do Agendamento:</span>
@@ -457,7 +459,7 @@ export default function AgendamentoCliente() {
                 
                 <button 
                   type="submit" 
-                  disabled={loading}
+                  disabled={loading || !horaSelecionada}
                   className="w-full sm:w-auto px-10 py-4 bg-[#E4B77D] text-black font-extrabold rounded-xl hover:bg-[#cfa56d] transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 shadow-xl shadow-[#E4B77D]/20"
                 >
                   {loading ? "Processando..." : "Confirmar Agendamento"}

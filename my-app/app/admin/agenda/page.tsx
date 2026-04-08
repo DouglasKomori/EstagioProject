@@ -13,6 +13,12 @@ export default function AgendaAdmin() {
   const [listaClientes, setListaClientes] = useState<any[]>([]);
   const [listaProfissionais, setListaProfissionais] = useState<any[]>([]);
   const [listaServicos, setListaServicos] = useState<any[]>([]);
+  
+  // === NOVO: ESTADOS PARA A LÓGICA DINÂMICA ===
+  const [profissionalFiltro, setProfissionalFiltro] = useState<string>("");
+  const [disponibilidades, setDisponibilidades] = useState<any[]>([]);
+  const [horariosDinamicos, setHorariosDinamicos] = useState<string[]>([]);
+  // ============================================
 
   // Estados do Modal
   const [modalAberto, setModalAberto] = useState(false);
@@ -22,7 +28,6 @@ export default function AgendaAdmin() {
   const [observacao, setObservacao] = useState("");
   const [erroModal, setErroModal] = useState("");
 
-  // ESTADOS PARA O BUSCADOR DE CLIENTES
   const [clienteSelecionado, setClienteSelecionado] = useState<number | "">("");
   const [buscaCliente, setBuscaCliente] = useState("");
   const [dropdownClienteAberto, setDropdownClienteAberto] = useState(false);
@@ -42,6 +47,125 @@ export default function AgendaAdmin() {
     return () => document.removeEventListener("mousedown", handleClickFora);
   }, []);
 
+  const obterToken = () => localStorage.getItem("token") || "";
+
+  // Carrega os dados básicos na primeira vez que abre a tela
+  useEffect(() => {
+    carregarDadosBase();
+  }, []);
+
+  // Quando o Admin seleciona uma data nova OU troca de profissional, recalcula tudo
+  useEffect(() => {
+    setDataVisualizacao(new Date(dataSelecionada.getFullYear(), dataSelecionada.getMonth(), 1));
+    if (profissionalFiltro) {
+      carregarAgendamentosEHorarios();
+    } else {
+      setAgendamentos([]);
+      setHorariosDinamicos([]);
+    }
+  }, [dataSelecionada, profissionalFiltro]);
+
+  const carregarDadosBase = async () => {
+    try {
+      const headers = { "Authorization": `Bearer ${obterToken()}` };
+      const resClientes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario`, { headers });
+      if(resClientes.ok) setListaClientes(await resClientes.json());
+
+      const resPro = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/profissionais`, { headers });
+      if(resPro.ok) {
+        const profs = await resPro.json();
+        setListaProfissionais(profs);
+        // Já deixa o primeiro barbeiro selecionado por padrão para facilitar
+        if (profs.length > 0) setProfissionalFiltro(String(profs[0].id));
+      }
+
+      const resServicos = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos`, { headers });
+      if(resServicos.ok) setListaServicos(await resServicos.json());
+    } catch (error) { console.error("Erro ao carregar listas base", error); }
+  };
+
+  const carregarAgendamentosEHorarios = async () => {
+    setLoading(true);
+    try {
+      // 1. Busca os agendamentos do dia
+      const ano = dataSelecionada.getFullYear();
+      const mes = String(dataSelecionada.getMonth() + 1).padStart(2, '0');
+      const dia = String(dataSelecionada.getDate()).padStart(2, '0');
+      const dataFormatada = `${ano}-${mes}-${dia}`;
+
+      const resAgendamentos = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos?data=${dataFormatada}`, {
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+      let agendamentosDia = [];
+      if (resAgendamentos.ok) {
+        agendamentosDia = await resAgendamentos.json();
+        // Filtra para exibir SÓ os agendamentos do barbeiro selecionado na tela
+        agendamentosDia = agendamentosDia.filter((a: any) => a.profissionalId === Number(profissionalFiltro));
+      }
+      setAgendamentos(agendamentosDia);
+
+      // 2. Busca a Escala de Trabalho (Disponibilidade) do barbeiro
+      const resDisp = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/disponibilidade?profissionalId=${profissionalFiltro}`, {
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+      if (resDisp.ok) {
+        const disponibilidadesProf = await resDisp.json();
+        setDisponibilidades(disponibilidadesProf);
+        gerarHorariosDinamicos(dataSelecionada, disponibilidadesProf);
+      }
+
+    } catch (error) { console.error("Erro:", error); } 
+    finally { setLoading(false); }
+  };
+
+  // === A MÁGICA DOS HORÁRIOS DINÂMICOS ACONTECE AQUI ===
+  const gerarHorariosDinamicos = (dataReferencia: Date, dispProfissional: any[]) => {
+    const diaSemana = dataReferencia.getDay(); // 0 (Dom) a 6 (Sáb)
+    
+    // Pega só os turnos que o barbeiro cadastrou para este dia da semana
+    const turnosDoDia = dispProfissional.filter(d => d.diaSemana === diaSemana);
+    
+    let slotsGerados: string[] = [];
+
+    turnosDoDia.forEach(turno => {
+      let [hInicio, mInicio] = turno.horaInicio.split(':').map(Number);
+      let [hFim, mFim] = turno.horaFim.split(':').map(Number);
+
+      let dataAtual = new Date();
+      dataAtual.setHours(hInicio, mInicio, 0, 0);
+
+      let dataFimTurno = new Date();
+      dataFimTurno.setHours(hFim, mFim, 0, 0);
+
+      // Vai fatiando o turno de 30 em 30 minutos
+      while (dataAtual < dataFimTurno) {
+        slotsGerados.push(dataAtual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+        dataAtual.setMinutes(dataAtual.getMinutes() + 30);
+      }
+    });
+
+    // Remove duplicatas (caso cadastre errado) e ordena as horas
+    setHorariosDinamicos([...new Set(slotsGerados)].sort());
+  };
+
+  const isHoraPassada = (horaString: string) => {
+    const hoje = new Date();
+    const dataSel = new Date(dataSelecionada.getFullYear(), dataSelecionada.getMonth(), dataSelecionada.getDate());
+    const dataHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+
+    if (dataSel < dataHoje) return true;
+    if (dataSel > dataHoje) return false;
+
+    const [horaSelecionadaNum, minutoSelecionadoNum] = horaString.split(':').map(Number);
+    const horaAtual = hoje.getHours();
+    const minutoAtual = hoje.getMinutes();
+
+    if (horaSelecionadaNum < horaAtual) return true;
+    if (horaSelecionadaNum === horaAtual && minutoSelecionadoNum <= minutoAtual) return true;
+    
+    return false;
+  };
+
   const calcularTempoTotal = () => {
     return servicosSelecionados.reduce((total, idServico) => {
       const servico = listaServicos.find(s => s.id === idServico);
@@ -56,83 +180,7 @@ export default function AgendaAdmin() {
     const [horas, minutos] = horaSelecionada.split(":").map(Number);
     const dataTemp = new Date();
     dataTemp.setHours(horas, minutos + tempoTotal, 0);
-
     return dataTemp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const horarios = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", 
-    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00"
-  ];
-
-
-  // FUNÇÃO: VERIFICA SE A HORA JÁ PASSOU
-
-  const isHoraPassada = (horaString: string) => {
-    const hoje = new Date();
-    // Zeramos as horas para comparar apenas os dias de forma exata
-    const dataSel = new Date(dataSelecionada.getFullYear(), dataSelecionada.getMonth(), dataSelecionada.getDate());
-    const dataHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-
-    // Se o dia selecionado for antes de hoje, todas as horas já passaram
-    if (dataSel < dataHoje) return true;
-    
-    // Se o dia selecionado for no futuro, nenhuma hora passou
-    if (dataSel > dataHoje) return false;
-
-    // Se o dia selecionado for HOJE, precisamos comparar as horas e os minutos
-    const [horaSelecionadaNum, minutoSelecionadoNum] = horaString.split(':').map(Number);
-    const horaAtual = hoje.getHours();
-    const minutoAtual = hoje.getMinutes();
-
-    if (horaSelecionadaNum < horaAtual) return true;
-    if (horaSelecionadaNum === horaAtual && minutoSelecionadoNum <= minutoAtual) return true;
-    
-    return false;
-  };
-
-  useEffect(() => {
-    setDataVisualizacao(new Date(dataSelecionada.getFullYear(), dataSelecionada.getMonth(), 1));
-    carregarAgendamentos();
-  }, [dataSelecionada]);
-
-  useEffect(() => {
-    carregarDadosParaModal();
-  }, []);
-  
-  const obterToken = () => localStorage.getItem("token") || "";
-
-  const carregarAgendamentos = async () => {
-    setLoading(true);
-    try {
-      const ano = dataSelecionada.getFullYear();
-      const mes = String(dataSelecionada.getMonth() + 1).padStart(2, '0');
-      const dia = String(dataSelecionada.getDate()).padStart(2, '0');
-      const dataFormatada = `${ano}-${mes}-${dia}`;
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos?data=${dataFormatada}`, {
-        headers: { "Authorization": `Bearer ${obterToken()}` }
-      });
-
-      if (response.ok) setAgendamentos(await response.json());
-      else setAgendamentos([]); 
-    } catch (error) { console.error("Erro ao carregar agendamentos:", error); } 
-    finally { setLoading(false); }
-  };
-
-  const carregarDadosParaModal = async () => {
-    try {
-      const headers = { "Authorization": `Bearer ${obterToken()}` };
-      const resClientes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario`, { headers });
-      if(resClientes.ok) setListaClientes(await resClientes.json());
-
-      const resPro = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/profissionais`, { headers });
-      if(resPro.ok) setListaProfissionais(await resPro.json());
-
-      const resServicos = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos`, { headers });
-      if(resServicos.ok) setListaServicos(await resServicos.json());
-    } catch (error) { console.error("Erro ao carregar listas do modal", error); }
   };
 
   const concluirAgendamento = async (id: number) => {
@@ -143,7 +191,7 @@ export default function AgendaAdmin() {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${obterToken()}` },
         body: JSON.stringify({ status: "CONCLUIDO" })
       });
-      if (response.ok) carregarAgendamentos();
+      if (response.ok) carregarAgendamentosEHorarios();
       else alert("Erro ao concluir o agendamento.");
     } catch (error) { console.error(error); }
   };
@@ -154,23 +202,31 @@ export default function AgendaAdmin() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/${id}/cancelar`, {
         method: "PUT", headers: { "Authorization": `Bearer ${obterToken()}` }
       });
-      const data = await response.json();
-      if (response.ok) carregarAgendamentos();
-      else alert(data.msg || data.erro || "Erro ao cancelar.");
+      if (response.ok) carregarAgendamentosEHorarios();
+      else alert("Erro ao cancelar.");
     } catch (error) { console.error(error); }
   };
 
   const abrirModal = (hora: string = "") => {
+    if (!profissionalFiltro) {
+      alert("Selecione um profissional primeiro!");
+      return;
+    }
+
     if (hora && !isHoraPassada(hora)) {
       setHoraSelecionada(hora);
     } else {
-      const primeiroDisponivel = horarios.find(h => !isHoraPassada(h));
-      setHoraSelecionada(primeiroDisponivel || horarios[0]);
+      const primeiroDisponivel = horariosDinamicos.find(h => !isHoraPassada(h));
+      if (!primeiroDisponivel) {
+        alert("Não há mais horários disponíveis ou livres para hoje.");
+        return;
+      }
+      setHoraSelecionada(primeiroDisponivel);
     }
     
     setClienteSelecionado("");
     setBuscaCliente("");
-    setProfissionalSelecionado("");
+    setProfissionalSelecionado(profissionalFiltro); // Já trava no barbeiro que está sendo visualizado
     setServicosSelecionados([]);
     setObservacao("");
     setErroModal("");
@@ -219,16 +275,15 @@ export default function AgendaAdmin() {
       const data = await response.json();
       if (response.ok) {
         setModalAberto(false);
-        carregarAgendamentos();
+        carregarAgendamentosEHorarios();
       } else { setErroModal(data.msg || "Erro ao salvar agendamento."); }
     } catch (error) { setErroModal("Erro de conexão com a API."); } 
     finally { setLoading(false); }
   };
 
-    const extrairHoraDeISO = (isoString: string) => {
+  const extrairHoraDeISO = (isoString: string) => {
     if (!isoString) return "";
-    const data = new Date(isoString);
-    return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return new Date(isoString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatarDataHeader = (data: Date) => data.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -278,10 +333,24 @@ export default function AgendaAdmin() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-[#E4B77D]">Agenda do Barbeiro</h1>
-            <p className="text-sm text-zinc-400 mt-1">Gerencie os horários e atendimentos</p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-sm text-zinc-400">Exibindo agenda de:</span>
+              <select 
+                value={profissionalFiltro} 
+                onChange={(e) => setProfissionalFiltro(e.target.value)}
+                className="bg-zinc-900 border border-zinc-700 rounded text-white text-sm font-bold p-1 focus:outline-none focus:border-[#E4B77D]"
+              >
+                <option value="" disabled>Selecione...</option>
+                {listaProfissionais.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+              </select>
+            </div>
           </div>
         </div>
-        <button onClick={() => abrirModal()} className="px-6 py-3 bg-[#E4B77D] text-black font-bold rounded-md hover:bg-[#cfa56d] transition-colors shadow-lg shadow-[#E4B77D]/10 flex items-center gap-2 justify-center">
+        <button 
+          onClick={() => abrirModal()} 
+          disabled={horariosDinamicos.length === 0}
+          className="px-6 py-3 bg-[#E4B77D] text-black font-bold rounded-md hover:bg-[#cfa56d] transition-colors shadow-lg shadow-[#E4B77D]/10 flex items-center gap-2 justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
           Novo Encaixe
         </button>
@@ -338,82 +407,87 @@ export default function AgendaAdmin() {
             )}
           </div>
 
-          <div className="p-2 flex-1 overflow-y-auto">
-            <div className="flex flex-col gap-2 p-4">
-              {horarios.map((hora) => {
-                
-                // === LÓGICA DE BUSCA ===
-                const agendamentosDaHora = agendamentos.filter(a => extrairHoraDeISO(a.dataHora) === hora);
-                let agendamento = agendamentosDaHora.find(a => a.status === "AGENDADO" || a.status === "CONCLUIDO");
-                if (!agendamento && agendamentosDaHora.length > 0) {
-                    agendamento = agendamentosDaHora[0]; // Só sobrou cancelados
-                }
+          <div className="p-2 flex-1 overflow-y-auto min-h-[400px]">
+            {horariosDinamicos.length === 0 && !loading ? (
+              <div className="flex flex-col items-center justify-center h-full text-zinc-500 py-20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mb-4 opacity-50">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+                <p className="text-lg font-medium">Dia de Folga</p>
+                <p className="text-sm">Nenhum horário de trabalho configurado para este dia.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 p-4">
+                {horariosDinamicos.map((hora) => {
+                  const agendamentosDaHora = agendamentos.filter(a => extrairHoraDeISO(a.dataHora) === hora);
+                  let agendamento = agendamentosDaHora.find(a => a.status === "AGENDADO" || a.status === "CONCLUIDO");
+                  if (!agendamento && agendamentosDaHora.length > 0) agendamento = agendamentosDaHora[0]; 
 
-                const passouDaHora = !agendamento && isHoraPassada(hora);
+                  const passouDaHora = !agendamento && isHoraPassada(hora); 
 
-                let bgClass = "bg-zinc-950 border-zinc-800 hover:border-[#E4B77D]/50";
-                let textClass = "text-zinc-500";
-                
-                if (agendamento) {
-                  if (agendamento.status === "AGENDADO") { bgClass = "bg-blue-950/30 border-blue-900/50"; textClass = "text-blue-400"; } 
-                  else if (agendamento.status === "CONCLUIDO") { bgClass = "bg-green-950/30 border-green-900/50 opacity-60"; textClass = "text-green-400"; } 
-                  else if (agendamento.status === "CANCELADO") { bgClass = "bg-red-950/20 border-red-900/30 opacity-50"; textClass = "text-red-400"; }
-                } else if (passouDaHora) {
-                  bgClass = "bg-zinc-900/30 border-zinc-900 opacity-50 pointer-events-none";
-                }
+                  let bgClass = "bg-zinc-950 border-zinc-800 hover:border-[#E4B77D]/50";
+                  let textClass = "text-zinc-500";
+                  
+                  if (agendamento) {
+                    if (agendamento.status === "AGENDADO") { bgClass = "bg-blue-950/30 border-blue-900/50"; textClass = "text-blue-400"; } 
+                    else if (agendamento.status === "CONCLUIDO") { bgClass = "bg-green-950/30 border-green-900/50 opacity-60"; textClass = "text-green-400"; } 
+                    else if (agendamento.status === "CANCELADO") { bgClass = "bg-red-950/20 border-red-900/30 opacity-50"; textClass = "text-red-400"; }
+                  } else if (passouDaHora) {
+                    bgClass = "bg-zinc-900/30 border-zinc-900 opacity-50 pointer-events-none";
+                  }
 
-                const isDisponivelParaAgendar = !agendamento || agendamento.status === "CANCELADO";
+                  const isDisponivelParaAgendar = !agendamento || agendamento.status === "CANCELADO";
 
-                return (
-                  <div key={hora} className={`flex items-stretch border rounded-lg transition-all group ${bgClass}`}>
-                    <div className={`w-20 p-4 flex flex-col items-center justify-center border-r border-zinc-800/50 font-mono font-bold text-lg ${agendamento && agendamento.status !== "CANCELADO" ? textClass : (passouDaHora ? 'text-zinc-700 line-through' : 'text-zinc-500 group-hover:text-[#E4B77D]')}`}>
-                      {hora}
-                    </div>
+                  return (
+                    <div key={hora} className={`flex items-stretch border rounded-lg transition-all group ${bgClass}`}>
+                      <div className={`w-20 p-4 flex flex-col items-center justify-center border-r border-zinc-800/50 font-mono font-bold text-lg ${agendamento && agendamento.status !== "CANCELADO" ? textClass : (passouDaHora ? 'text-zinc-700 line-through' : 'text-zinc-500 group-hover:text-[#E4B77D]')}`}>
+                        {hora}
+                      </div>
 
-                    <div className="flex-1 p-4 flex items-center justify-between">
-                      {agendamento && agendamento.status !== "CANCELADO" ? (
-                        <div className="flex flex-col">
-                          <span className="font-bold text-white text-lg">{agendamento.clienteNome} <span className="text-xs text-zinc-500 font-normal">com {agendamento.profissionalNome}</span></span>
-                            <span className="text-sm text-[#E4B77D] font-medium flex items-center gap-2 mt-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" /></svg>
-                            {agendamento.nomesServicos || "Nenhum serviço atrelado"}
-                          </span>
-                          {agendamento.observacao && (
-                            <span className="text-xs text-zinc-500 italic mt-1">
-                              Obs: {agendamento.observacao}
+                      <div className="flex-1 p-4 flex items-center justify-between">
+                        {agendamento && agendamento.status !== "CANCELADO" ? (
+                          <div className="flex flex-col">
+                            <span className="font-bold text-white text-lg">{agendamento.clienteNome} <span className="text-xs text-zinc-500 font-normal">com {agendamento.profissionalNome}</span></span>
+                              <span className="text-sm text-[#E4B77D] font-medium flex items-center gap-2 mt-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" /></svg>
+                              {agendamento.nomesServicos || "Nenhum serviço atrelado"}
                             </span>
-                            )}
-                        </div>
-                      ) : (
-                        <span className={`italic text-sm transition-colors ${passouDaHora ? 'text-zinc-700' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
-                          {passouDaHora ? "Horário indisponível (já passou)" : "Horário disponível..."}
-                        </span>
-                      )}
+                            {agendamento.observacao && (
+                              <span className="text-xs text-zinc-500 italic mt-1">
+                                Obs: {agendamento.observacao}
+                              </span>
+                              )}
+                          </div>
+                        ) : (
+                          <span className={`italic text-sm transition-colors ${passouDaHora ? 'text-zinc-700' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
+                            {passouDaHora ? "Horário indisponível (já passou)" : "Horário disponível..."}
+                          </span>
+                        )}
 
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {agendamento && agendamento.status === 'AGENDADO' && (
-                           <>
-                            <button onClick={() => cancelarAgendamento(agendamento.id)} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-md border border-zinc-800" title="Cancelar Agendamento">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                            <button onClick={() => concluirAgendamento(agendamento.id)} className="p-2 text-zinc-400 hover:text-green-400 bg-zinc-900 rounded-md border border-zinc-800" title="Marcar como Concluído">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                            </button>
-                           </>
-                        )}
-                        
-                        {/* Se estiver disponível E a hora não tiver passado, exibe o botão Agendar */}
-                        {isDisponivelParaAgendar && !passouDaHora && (
-                            <button onClick={() => abrirModal(hora)} className="px-4 py-2 text-sm font-bold bg-zinc-800 text-[#E4B77D] rounded-md hover:bg-zinc-700 transition-colors border border-zinc-700">
-                              Agendar
-                            </button>
-                        )}
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {agendamento && agendamento.status === 'AGENDADO' && (
+                            <>
+                              <button onClick={() => cancelarAgendamento(agendamento.id)} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-md border border-zinc-800" title="Cancelar Agendamento">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                              </button>
+                              <button onClick={() => concluirAgendamento(agendamento.id)} className="p-2 text-zinc-400 hover:text-green-400 bg-zinc-900 rounded-md border border-zinc-800" title="Marcar como Concluído">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                              </button>
+                            </>
+                          )}
+                          
+                          {isDisponivelParaAgendar && !passouDaHora && (
+                              <button onClick={() => abrirModal(hora)} className="px-4 py-2 text-sm font-bold bg-zinc-800 text-[#E4B77D] rounded-md hover:bg-zinc-700 transition-colors border border-zinc-700">
+                                Agendar
+                              </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
       </main>
@@ -442,7 +516,7 @@ export default function AgendaAdmin() {
                     value={horaSelecionada} onChange={(e) => setHoraSelecionada(e.target.value)} required
                     className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-3 text-[#E4B77D] font-bold focus:outline-none focus:border-[#E4B77D] appearance-none"
                   >
-                    {horarios.map(h => (
+                    {horariosDinamicos.map(h => (
                       <option key={h} value={h} disabled={isHoraPassada(h)}>
                         {h} {isHoraPassada(h) ? '(Indisponível)' : ''}
                       </option>
@@ -452,44 +526,33 @@ export default function AgendaAdmin() {
 
                 <div className="flex-[2]">
                   <label className="block text-sm font-medium text-zinc-300 mb-1">Profissional</label>
+                  {/* O barbeiro já vem pré-selecionado e travado para evitar confusão */}
                   <select 
-                    value={profissionalSelecionado} onChange={(e) => setProfissionalSelecionado(e.target.value)} required
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-3 text-white focus:outline-none focus:border-[#E4B77D] appearance-none"
+                    value={profissionalSelecionado} disabled required
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-3 text-white opacity-70 appearance-none cursor-not-allowed"
                   >
-                    <option value="" disabled>Selecione...</option>
                     {listaProfissionais.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                   </select>
                 </div>
               </div>
 
-              {/* BUSCADOR DE CLIENTES (AUTOCOMPLETE) */}
+              {/* BUSCADOR DE CLIENTES */}
               <div className="relative" ref={dropdownRef}>
                 <label className="block text-sm font-medium text-zinc-300 mb-1">Cliente</label>
                 <input 
-                  type="text"
-                  placeholder="Busque pelo nome..."
-                  value={buscaCliente}
-                  onChange={(e) => {
-                    setBuscaCliente(e.target.value);
-                    setDropdownClienteAberto(true);
-                    setClienteSelecionado(""); 
-                  }}
+                  type="text" placeholder="Busque pelo nome..." value={buscaCliente}
+                  onChange={(e) => { setBuscaCliente(e.target.value); setDropdownClienteAberto(true); setClienteSelecionado(""); }}
                   onFocus={() => setDropdownClienteAberto(true)}
                   className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-3 text-white focus:outline-none focus:border-[#E4B77D]"
                 />
                 
-                {/* Lista Suspensa (Dropdown) */}
                 {dropdownClienteAberto && (
                   <ul className="absolute z-20 w-full mt-1 max-h-48 overflow-y-auto bg-zinc-800 border border-zinc-700 rounded-md shadow-2xl custom-scrollbar">
                     {clientesFiltrados.length > 0 ? (
                       clientesFiltrados.map(c => (
                         <li 
                           key={c.id} 
-                          onClick={() => {
-                            setClienteSelecionado(c.id);
-                            setBuscaCliente(c.nome); 
-                            setDropdownClienteAberto(false); 
-                          }}
+                          onClick={() => { setClienteSelecionado(c.id); setBuscaCliente(c.nome); setDropdownClienteAberto(false); }}
                           className="px-4 py-3 hover:bg-zinc-700 cursor-pointer text-zinc-300 hover:text-white transition-colors border-b border-zinc-700/50 last:border-0"
                         >
                           {c.nome} <span className="text-xs text-zinc-500 ml-2">{c.telefone}</span>
@@ -501,7 +564,6 @@ export default function AgendaAdmin() {
                   </ul>
                 )}
                 
-                {/* Indicador visual se o cliente foi selecionado corretamente */}
                 {clienteSelecionado && !dropdownClienteAberto && (
                   <span className="absolute right-3 top-10 text-green-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -509,7 +571,7 @@ export default function AgendaAdmin() {
                 )}
               </div>
 
-              {/* CHECKBOXES DE SERVIÇOS COM DURAÇÃO */}
+              {/* CHECKBOXES DE SERVIÇOS */}
               <div>
                 <label className="block text-sm font-medium text-zinc-300 mb-2 flex justify-between">
                   <span>Serviços (Selecione)</span>
@@ -539,7 +601,6 @@ export default function AgendaAdmin() {
                   )}
                 </div>
                 
-                {/* ALERTA DE HORÁRIO DE FIM */}
                 {calcularTempoTotal() > 0 && horaSelecionada && (
                   <p className="text-xs text-zinc-500 mt-2 flex items-center gap-1">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>

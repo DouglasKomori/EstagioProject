@@ -32,21 +32,7 @@ export default function AdminDashboard() {
         {/* Grid ajustado para 3 colunas em telas grandes (lg) e 2 em médias (md) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
-          {/* Botão: Serviços */}
-          <Link 
-            href="/admin/servicos" 
-            className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
-          >
-            <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-white group-hover:text-[#E4B77D] transition-colors">Serviços</h3>
-            <p className="text-zinc-400 mt-2 text-sm">Gerenciar cortes, barbas, tratamentos e valores.</p>
-          </Link>
-
-          {/* Botão: Agenda de Hoje */}
+          {/* 1. Botão: Agenda de Hoje */}
           <Link 
             href="/admin/agenda" 
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
@@ -60,21 +46,49 @@ export default function AdminDashboard() {
             <p className="text-zinc-400 mt-2 text-sm">Visualizar horários e compromissos marcados.</p>
           </Link>
 
-          {/* Botão: Clientes */}
+          {/* 2. Botão: Disponibilidade (Escala) */}
           <Link 
-            href="/admin/clientes" 
+            href="/admin/disponibilidade" 
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
           >
             <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
               <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-white group-hover:text-[#E4B77D] transition-colors">Clientes</h3>
-            <p className="text-zinc-400 mt-2 text-sm">Lista de usuários cadastrados no aplicativo.</p>
+            <h3 className="text-xl font-bold text-white group-hover:text-[#E4B77D] transition-colors">Escala de Trabalho</h3>
+            <p className="text-zinc-400 mt-2 text-sm">Definir os dias e horários fixos de cada barbeiro.</p>
           </Link>
 
-          {/* Botão: Marcas */}
+          {/* 3. Botão: Bloqueios */}
+          <Link 
+            href="/admin/bloqueios" 
+            className="group p-6 bg-red-950/10 border border-red-900/30 rounded-xl hover:border-red-500/50 hover:bg-red-950/20 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
+          >
+            <div className="p-3 bg-red-950/50 rounded-lg mb-4 text-red-500 group-hover:scale-110 transition-transform">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-white group-hover:text-red-400 transition-colors">Bloqueios</h3>
+            <p className="text-zinc-400 mt-2 text-sm">Folgas, férias e atestados médicos dos barbeiros.</p>
+          </Link>
+
+          {/* 4. Botão: Serviços */}
+          <Link 
+            href="/admin/servicos" 
+            className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
+          >
+            <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-white group-hover:text-[#E4B77D] transition-colors">Serviços</h3>
+            <p className="text-zinc-400 mt-2 text-sm">Gerenciar cortes, barbas, tratamentos e valores.</p>
+          </Link>
+
+          {/* 5. Botão: Marcas */}
           <Link 
             href="/admin/marcas" 
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
@@ -88,7 +102,7 @@ export default function AdminDashboard() {
             <p className="text-zinc-400 mt-2 text-sm">Gerenciar marcas de produtos utilizados na barbearia.</p>
           </Link>
 
-          {/* Botão: Produtos */}
+          {/* 6. Botão: Produtos */}
           <Link 
             href="/admin/produtos" 
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
@@ -102,7 +116,21 @@ export default function AdminDashboard() {
             <p className="text-zinc-400 mt-2 text-sm">Controle de estoque, preços de custo e de venda.</p>
           </Link>
 
-          {/* Botão: Pessoas (Física e Jurídica) */}
+          {/* 7. Botão: Clientes */}
+          <Link 
+            href="/admin/clientes" 
+            className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
+          >
+            <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-white group-hover:text-[#E4B77D] transition-colors">Clientes</h3>
+            <p className="text-zinc-400 mt-2 text-sm">Lista de usuários cadastrados no aplicativo.</p>
+          </Link>
+
+          {/* 8. Botão: Pessoas (Física e Jurídica) */}
           <Link 
             href="/admin/pessoas" 
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
@@ -115,16 +143,6 @@ export default function AdminDashboard() {
             <h3 className="text-xl font-bold text-white group-hover:text-[#E4B77D] transition-colors">Pessoas</h3>
             <p className="text-zinc-400 mt-2 text-sm">Cadastro de barbeiros (PF/PJ).</p>
           </Link>
-
-          <Link href="/admin/bloqueios" className="group p-6 bg-red-950/10 border border-red-900/30 rounded-xl hover:border-red-500/50 hover:bg-red-950/20 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg">
-          <div className="p-3 bg-red-950/50 rounded-lg mb-4 text-red-500 group-hover:scale-110 transition-transform">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-bold text-white group-hover:text-red-400 transition-colors">Bloqueios</h3>
-          <p className="text-zinc-400 mt-2 text-sm">Folgas, férias e atestados médicos dos barbeiros.</p>
-        </Link>
 
         </div>
       </main>
