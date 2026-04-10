@@ -163,6 +163,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="font-medium">Pessoas</span>
             </Link>
 
+            {/* 9. Comandas */}
+            <Link href="/admin/comandas" className="flex items-center gap-4 px-4 py-3 rounded-lg text-zinc-300 hover:text-[#E4B77D] hover:bg-zinc-900/50 transition-all group">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500 group-hover:text-[#E4B77D] transition-colors"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+              <span className="font-medium">Caixa / Comandas</span>
+            </Link>
+
           </nav>
 
           <div className="mt-8 pt-6 border-t border-zinc-900 shrink-0 text-sm text-zinc-500 text-center">

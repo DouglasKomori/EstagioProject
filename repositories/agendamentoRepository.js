@@ -59,16 +59,13 @@ export default class AgendamentoRepository {
         try {
             await this.#banco.AbreTransacao();
 
-            // 1. Grava o Agendamento (Usando os nomes EXATOS do diagrama)
             let sqlAgendamento = "INSERT INTO agendamento (dataHora, clienteId, profissionalId, status, observacao, ativo) VALUES (?, ?, ?, ?, ?, 1)";
             let paramsAgendamento = [agendamento.dataHora, agendamento.clienteId, agendamento.profissionalId, agendamento.status, agendamento.observacao];
             await this.#banco.ExecutaComandoNonQuery(sqlAgendamento, paramsAgendamento);
 
-            // 2. Pega o ID gerado
             let lastIdRow = await this.#banco.ExecutaComando("SELECT LAST_INSERT_ID() as id");
             let agendamentoId = lastIdRow[0].id;
 
-            // 3. Grava os Serviços Filhos (Exatamente com os nomes do diagrama)
             if (agendamento.servicos && agendamento.servicos.length > 0) {
                 let sqlServico = "INSERT INTO agendamento_servico (agendamentoId, servicoId) VALUES (?, ?)";
                 for (let servico of agendamento.servicos) {

@@ -7,7 +7,6 @@ export default class ServicosController {
         this.#repoServicos = new ServicosRepository();
     }
 
-    // Atualizado para ler o parâmetro da URL (?inativos=true)
     async listar(req,res){
         try{
             const incluirInativos = req.query.inativos === 'true';
@@ -24,7 +23,6 @@ export default class ServicosController {
         }
     }
 
-    // Atualizado com a trava de nome duplicado
     async cadastrar(req, res){
         try{
             let {nome, descricao, valor, tempoEstimadoMinutos} = req.body;
@@ -32,7 +30,6 @@ export default class ServicosController {
                 return res.status(400).json({msg: "Informe nome, descrição, valor e tempo estimado para cadastrar um serviço!"});
             }
 
-            // NOVA REGRA: Verifica se já existe
             const existe = await this.#repoServicos.verificarNomeExistente(nome);
             if (existe) {
                 return res.status(400).json({msg: "Já existe um serviço cadastrado com este nome!"});

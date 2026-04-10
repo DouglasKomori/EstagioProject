@@ -31,7 +31,6 @@ export default class MarcaController{
                 return res.status(400).json({msg: "Informe o nome para cadastrar uma marca!"});
             }
 
-            // Verifica se o nome já existe
             const existe = await this.#repoMarca.verificarNomeExistente(nome);
             if (existe) {
                 return res.status(400).json({msg: "Já existe uma marca cadastrada com este nome!"});

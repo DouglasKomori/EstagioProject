@@ -1,0 +1,512 @@
+"use client";
+import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
+
+export default function GerenciarComandas() {
+  const [comandas, setComandas] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Dados Base para os Selects
+  const [clientes, setClientes] = useState<any[]>([]);
+  const [profissionais, setProfissionais] = useState<any[]>([]);
+  const [servicos, setServicos] = useState<any[]>([]);
+  const [produtos, setProdutos] = useState<any[]>([]);
+
+  // Estados Modal Nova Comanda
+  const [modalNovaAberto, setModalNovaAberto] = useState(false);
+  const [numeroComanda, setNumeroComanda] = useState("");
+  const [clienteId, setClienteId] = useState<number | "">("");
+  const [erroNova, setErroNova] = useState("");
+
+  // === ESTADOS PARA O BUSCADOR DE CLIENTE ===
+  const [buscaCliente, setBuscaCliente] = useState("");
+  const [dropdownClienteAberto, setDropdownClienteAberto] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const clientesFiltrados = clientes.filter(c => 
+    c.nome.toLowerCase().includes(buscaCliente.toLowerCase())
+  );
+
+  // Fecha o dropdown se clicar fora
+  useEffect(() => {
+    const handleClickFora = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownClienteAberto(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickFora);
+    return () => document.removeEventListener("mousedown", handleClickFora);
+  }, []);
+
+  // Estados Modal Detalhes (Adicionar Itens e Pagar)
+  const [modalDetalhesAberto, setModalDetalhesAberto] = useState(false);
+  const [comandaAtual, setComandaAtual] = useState<any>(null);
+  
+  // Formulário de Adicionar Item
+  const [tipoItem, setTipoItem] = useState<"SERVICO" | "PRODUTO">("SERVICO");
+  const [itemId, setItemId] = useState("");
+  const [profissionalId, setProfissionalId] = useState("");
+  const [quantidade, setQuantidade] = useState(1);
+  const [valorCobrado, setValorCobrado] = useState<number | "">("");
+
+  const obterToken = () => localStorage.getItem("token") || "";
+
+  useEffect(() => {
+    carregarComandasAbertas();
+    carregarDadosBase();
+  }, []);
+
+  const carregarComandasAbertas = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas`, {
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+      if (res.ok) setComandas(await res.json());
+    } catch (error) { console.error(error); }
+  };
+
+  const carregarDadosBase = async () => {
+    const headers = { "Authorization": `Bearer ${obterToken()}` };
+    try {
+      const resCli = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario`, { headers });
+      if (resCli.ok) setClientes(await resCli.json());
+
+      const resProf = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/profissionais`, { headers });
+      if (resProf.ok) setProfissionais(await resProf.json());
+
+      const resServ = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos`, { headers });
+      if (resServ.ok) setServicos(await resServ.json());
+
+      const resProd = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/produtos`, { headers });
+      if (resProd.ok) setProdutos(await resProd.json());
+    } catch (e) { console.error("Erro ao carregar dados base"); }
+  };
+
+  // --- ABRIR NOVA COMANDA ---
+  const abrirNovaComanda = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErroNova("");
+    setLoading(true);
+
+    if(!clienteId){
+      setErroNova("Selecione um cliente da lista");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/abrir`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${obterToken()}` },
+        body: JSON.stringify({ numero_comanda: Number(numeroComanda), clienteId: Number(clienteId) })
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setModalNovaAberto(false);
+        setNumeroComanda("");
+        setClienteId("");
+        setBuscaCliente("");
+        setDropdownClienteAberto(false);
+        carregarComandasAbertas();
+      } else {
+        setErroNova(data.msg || "Erro ao abrir comanda.");
+      }
+    } catch (error) { setErroNova("Erro de conexão."); }
+    finally { setLoading(false); }
+  };
+
+  // --- CONSULTAR DETALHES ---
+  const abrirDetalhes = async (id: number) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/${id}`, {
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+      if (res.ok) {
+        setComandaAtual(await res.json());
+        setItemId(""); setProfissionalId(""); setQuantidade(1); setValorCobrado("");
+        setModalDetalhesAberto(true);
+      }
+    } catch (error) { console.error(error); }
+  };
+
+  // --- ADICIONAR ITEM ---
+  const handleSelecionarItem = (idSelecionado: string) => {
+    setItemId(idSelecionado);
+    if (tipoItem === "SERVICO") {
+      const servico = servicos.find(s => s.id === Number(idSelecionado));
+      if (servico) setValorCobrado(Number(servico.valor));
+    } else {
+      const produto = produtos.find(p => p.id === Number(idSelecionado));
+      if (produto) setValorCobrado(Number(produto.precoVenda || 0));
+    }
+  };
+
+  const adicionarItemComanda = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const payload = {
+      comandaId: comandaAtual.id,
+      tipo: tipoItem,
+      idItem: Number(itemId),
+      valor: Number(valorCobrado),
+      quantidade: tipoItem === "PRODUTO" ? Number(quantidade) : 1,
+      profissionalId: tipoItem === "SERVICO" ? Number(profissionalId) : null
+    };
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/adicionar-item`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${obterToken()}` },
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.ok) {
+        abrirDetalhes(comandaAtual.id);
+      } else {
+        const data = await res.json();
+        alert(data.msg || "Erro ao adicionar item");
+      }
+    } catch (error) { alert("Erro de conexão."); }
+    finally { setLoading(false); }
+  };
+
+  // --- NOVO: REMOVER ITEM ---
+  const removerItemDaComanda = async (tipo: "SERVICO" | "PRODUTO", idInterno: number) => {
+    if(!window.confirm("Deseja remover este item da ficha?")) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/remover-item/${tipo}/${idInterno}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+      if (res.ok) {
+        abrirDetalhes(comandaAtual.id); // Recarrega a lista
+      } else {
+        alert("Erro ao remover item.");
+      }
+    } catch (error) { alert("Erro de conexão."); }
+    finally { setLoading(false); }
+  };
+
+  // --- FINALIZAR CONTA ---
+  const fecharConta = async () => {
+    if (!window.confirm(`Deseja confirmar o pagamento da Ficha N.º ${comandaAtual.numero_comanda}?`)) return;
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/${comandaAtual.id}/finalizar`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+
+      if (res.ok) {
+        alert("Pagamento confirmado com sucesso!");
+        setModalDetalhesAberto(false);
+        carregarComandasAbertas();
+      } else {
+        alert("Erro ao finalizar a comanda.");
+      }
+    } catch (error) { alert("Erro de conexão."); }
+    finally { setLoading(false); }
+  };
+
+  // --- NOVO: CANCELAR COMANDA ---
+  const cancelarComanda = async () => {
+    if (!window.confirm(`ATENÇÃO: Deseja realmente CANCELAR a Ficha N.º ${comandaAtual.numero_comanda}? Essa ação não pode ser desfeita.`)) return;
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/${comandaAtual.id}/cancelar`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+
+      if (res.ok) {
+        alert("Ficha cancelada.");
+        setModalDetalhesAberto(false);
+        carregarComandasAbertas();
+      } else {
+        alert("Erro ao cancelar a ficha.");
+      }
+    } catch (error) { alert("Erro de conexão."); }
+    finally { setLoading(false); }
+  };
+
+  // --- CÁLCULOS MATEMÁTICOS ---
+  const calcularTotal = () => {
+    if (!comandaAtual) return 0;
+    const totalServicos = comandaAtual.servicos.reduce((acc: number, s: any) => acc + Number(s.valorCobrado), 0);
+    const totalProdutos = comandaAtual.produtos.reduce((acc: number, p: any) => acc + (Number(p.valorCobrado) * Number(p.quantidade)), 0);
+    return totalServicos + totalProdutos;
+  };
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8 font-sans">
+      
+    <header className="flex flex-col md:flex-row md:justify-between items-center mb-8 border-b border-zinc-900 pb-4 max-w-6xl mx-auto gap-4 md:gap-0">
+        <div>
+          <h1 className="text-2xl font-bold text-[#E4B77D] flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            Caixa / Comandas
+          </h1>
+          <p className="text-sm text-zinc-400 mt-1">Gerencie os consumos e pagamentos do dia.</p>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <Link href="/admin" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+            Voltar
+          </Link>
+          
+          <button 
+            onClick={() => {
+              setModalNovaAberto(true);
+              setBuscaCliente("");
+              setClienteId("");
+            }} 
+            className="px-6 py-2 bg-[#E4B77D] text-black font-bold rounded-md hover:bg-[#cfa56d] transition-colors shadow-lg flex items-center gap-2"
+          >
+            + Abrir Comanda
+          </button>
+        </div>
+      </header>
+
+      {/* GRADE DE COMANDAS ABERTAS */}
+      <main className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {comandas.length === 0 ? (
+          <div className="col-span-full py-20 flex flex-col items-center justify-center text-zinc-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="opacity-20 mb-4">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            <p>Nenhuma comanda aberta no momento.</p>
+          </div>
+        ) : (
+          comandas.map(c => (
+            <button 
+              key={c.id}
+              onClick={() => abrirDetalhes(c.id)}
+              className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 flex flex-col items-center justify-center gap-2 hover:border-[#E4B77D] hover:bg-zinc-800 transition-all shadow-lg group relative overflow-hidden"
+            >
+              <div className="absolute top-0 w-full h-1 bg-[#E4B77D]"></div>
+              <span className="text-zinc-500 text-xs font-bold uppercase tracking-widest mt-2">Ficha</span>
+              <span className="text-5xl font-black text-white group-hover:text-[#E4B77D] transition-colors">{c.numero_comanda}</span>
+              <div className="w-full h-px bg-zinc-800 my-2"></div>
+              <span className="text-sm font-medium text-zinc-300 text-center truncate w-full">{c.clienteNome.split(" ")[0]}</span>
+              <span className="text-xs text-zinc-500">{new Date(c.dataAbertura).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+            </button>
+          ))
+        )}
+      </main>
+
+      {/* MODAL 1: ABRIR NOVA COMANDA */}
+      {modalNovaAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setModalNovaAberto(false)} />
+          <div className="bg-zinc-950 border border-zinc-800 rounded-xl w-full max-w-sm p-6 relative z-10 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h2 className="text-xl font-bold text-[#E4B77D] mb-6">Abrir Nova Comanda</h2>
+            
+            
+            <form onSubmit={abrirNovaComanda} className="flex flex-col gap-4">
+              {erroNova && <div className="bg-red-950/50 border border-red-900 text-red-400 text-sm p-3 rounded-md">{erroNova}</div>}
+              
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">N.º da Comanda</label>
+                <input 
+                  type="number" required min="1" value={numeroComanda} onChange={(e) => setNumeroComanda(e.target.value)}
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-3 text-white text-lg font-bold focus:outline-none focus:border-[#E4B77D]"
+                  placeholder="Ex: 1"
+                />
+              </div>
+
+              {/* BUSCADOR DE CLIENTES */}
+              <div className="relative" ref={dropdownRef}>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">Buscar Cliente</label>
+                <input 
+                  type="text" placeholder="Digite o nome..." value={buscaCliente}
+                  onChange={(e) => { setBuscaCliente(e.target.value); setDropdownClienteAberto(true); setClienteId(""); }}
+                  onFocus={() => setDropdownClienteAberto(true)}
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-3 text-white focus:outline-none focus:border-[#E4B77D]"
+                />
+                
+                {dropdownClienteAberto && (
+                  <ul className="absolute z-20 w-full mt-1 max-h-48 overflow-y-auto bg-zinc-800 border border-zinc-700 rounded-md shadow-2xl custom-scrollbar">
+                    {clientesFiltrados.length > 0 ? (
+                      clientesFiltrados.map(c => (
+                        <li 
+                          key={c.id} 
+                          onClick={() => { setClienteId(c.id); setBuscaCliente(c.nome); setDropdownClienteAberto(false); }}
+                          className="px-4 py-3 hover:bg-zinc-700 cursor-pointer text-zinc-300 hover:text-white transition-colors border-b border-zinc-700/50 last:border-0"
+                        >
+                          {c.nome} <span className="text-xs text-zinc-500 ml-2">{c.telefone}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="px-4 py-3 text-zinc-500 italic text-sm">Nenhum cliente encontrado.</li>
+                    )}
+                  </ul>
+                )}
+                
+                {clienteId && !dropdownClienteAberto && (
+                  <span className="absolute right-3 top-10 text-green-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-3 mt-4 pt-4 border-t border-zinc-800">
+                <button type="button" onClick={() => setModalNovaAberto(false)} className="flex-1 py-3 border border-zinc-700 text-zinc-300 rounded-md hover:bg-zinc-800 transition-colors">Cancelar</button>
+                <button type="submit" disabled={loading} className="flex-1 py-3 bg-[#E4B77D] text-black font-bold rounded-md hover:bg-[#cfa56d] transition-colors">Abrir Ficha</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: DETALHES DA COMANDA (Adicionar Consumo e Pagar) */}
+      {modalDetalhesAberto && comandaAtual && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setModalDetalhesAberto(false)} />
+          
+          <div className="bg-zinc-950 border border-zinc-800 rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col md:flex-row relative z-10 shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+            
+            {/* Lado Esquerdo: Adicionar Itens */}
+            <div className="w-full md:w-1/2 p-6 bg-zinc-900 border-b md:border-b-0 md:border-r border-zinc-800 overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-white">Adicionar à Ficha <span className="text-[#E4B77D]">{comandaAtual.numero_comanda}</span></h2>
+                <button onClick={() => setModalDetalhesAberto(false)} className="text-zinc-500 hover:text-white md:hidden">✕</button>
+              </div>
+
+              <div className="flex bg-zinc-950 rounded-lg p-1 mb-6">
+                <button onClick={() => {setTipoItem("SERVICO"); setItemId(""); setValorCobrado("");}} className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${tipoItem === "SERVICO" ? "bg-zinc-800 text-[#E4B77D]" : "text-zinc-500 hover:text-zinc-300"}`}>Serviço Prestado</button>
+                <button onClick={() => {setTipoItem("PRODUTO"); setItemId(""); setValorCobrado("");}} className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${tipoItem === "PRODUTO" ? "bg-zinc-800 text-[#E4B77D]" : "text-zinc-500 hover:text-zinc-300"}`}>Produto Consumido</button>
+              </div>
+
+              <form onSubmit={adicionarItemComanda} className="flex flex-col gap-4">
+                
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">{tipoItem === "SERVICO" ? "Qual Serviço?" : "Qual Produto?"}</label>
+                  <select required value={itemId} onChange={(e) => handleSelecionarItem(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-3 text-white focus:border-[#E4B77D]">
+                    <option value="" disabled>Selecione...</option>
+                    {tipoItem === "SERVICO" 
+                      ? servicos.map(s => <option key={s.id} value={s.id}>{s.nome} (R$ {Number(s.valor).toFixed(2)})</option>)
+                      : produtos.map(p => <option key={p.id} value={p.id}>{p.nome} (R$ {Number(p.precoVenda || 0).toFixed(2)})</option>)
+                    }
+                  </select>
+                </div>
+
+                {tipoItem === "SERVICO" && (
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-400 mb-1">Quem executou? (Para Comissão)</label>
+                    <select required value={profissionalId} onChange={(e) => setProfissionalId(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-3 text-white focus:border-[#E4B77D]">
+                      <option value="" disabled>Selecione o Barbeiro...</option>
+                      {profissionais.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                <div className="flex gap-4">
+                  {tipoItem === "PRODUTO" && (
+                    <div className="w-1/3">
+                      <label className="block text-sm font-medium text-zinc-400 mb-1">Qtd.</label>
+                      <input type="number" required min="1" value={quantidade} onChange={(e) => setQuantidade(Number(e.target.value))} className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-3 text-white" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-zinc-400 mb-1">Valor Cobrado (R$)</label>
+                    <input type="number" step="0.01" required value={valorCobrado} onChange={(e) => setValorCobrado(Number(e.target.value))} className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-3 text-[#E4B77D] font-bold" />
+                  </div>
+                </div>
+
+                <button type="submit" disabled={loading || !itemId} className="w-full py-3 bg-zinc-800 text-white font-bold rounded-md hover:bg-zinc-700 transition-colors mt-2 border border-zinc-700">
+                  {loading ? "Processando..." : "Lançar na Ficha"}
+                </button>
+              </form>
+            </div>
+
+            {/* Lado Direito: Extrato da Comanda e Pagamento */}
+            <div className="w-full md:w-1/2 flex flex-col bg-zinc-950 relative h-full max-h-[50vh] md:max-h-full">
+              
+              <div className="p-6 bg-zinc-900 border-b border-zinc-800 flex justify-between items-center shrink-0">
+                <div>
+                  <p className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Cliente</p>
+                  <h3 className="text-lg font-bold text-white">{comandaAtual.clienteNome}</h3>
+                </div>
+                <button onClick={() => setModalDetalhesAberto(false)} className="text-zinc-500 hover:text-white hidden md:block p-2">✕</button>
+              </div>
+
+              {/* Lista do Extrato */}
+              <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Extrato de Consumo</p>
+                
+                {comandaAtual.servicos.length === 0 && comandaAtual.produtos.length === 0 ? (
+                  <p className="text-sm text-zinc-600 italic">Nenhum item lançado ainda.</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {/* Serviços */}
+                    {comandaAtual.servicos.map((s: any) => (
+                      <div key={`s-${s.id}`} className="flex justify-between items-center border-b border-zinc-800/50 pb-2 group">
+                        <div>
+                          <p className="text-zinc-200 text-sm font-medium">{s.servicoNome}</p>
+                          <p className="text-zinc-500 text-xs">Por: {s.profissionalNome}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-zinc-400 font-mono text-sm">R$ {Number(s.valorCobrado).toFixed(2)}</span>
+                          <button onClick={() => removerItemDaComanda("SERVICO", s.id)} className="text-zinc-700 hover:text-red-500 transition-colors p-1" title="Remover Item">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Produtos */}
+                    {comandaAtual.produtos.map((p: any) => (
+                      <div key={`p-${p.id}`} className="flex justify-between items-center border-b border-zinc-800/50 pb-2 group">
+                        <div>
+                          <p className="text-zinc-200 text-sm font-medium">{p.quantidade}x {p.produtoNome}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-zinc-400 font-mono text-sm">R$ {(Number(p.valorCobrado) * Number(p.quantidade)).toFixed(2)}</span>
+                          <button onClick={() => removerItemDaComanda("PRODUTO", p.id)} className="text-zinc-700 hover:text-red-500 transition-colors p-1" title="Remover Item">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Rodapé ATUALIZADO (Total, Fechar Conta e Cancelar) */}
+              <div className="p-6 bg-zinc-900 border-t border-zinc-800 shrink-0">
+                <div className="flex justify-between items-end mb-4">
+                  <span className="font-bold uppercase tracking-widest text-zinc-500 text-sm">Total Geral</span>
+                  <span className="text-3xl font-black text-[#E4B77D]">R$ {calcularTotal().toFixed(2)}</span>
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <button 
+                    onClick={fecharConta} 
+                    disabled={loading || calcularTotal() === 0}
+                    className="w-full py-4 bg-[#E4B77D] text-black font-extrabold rounded-lg hover:bg-[#cfa56d] transition-colors shadow-lg disabled:opacity-50"
+                  >
+                    Confirmar Pagamento
+                  </button>
+                  <button 
+                    onClick={cancelarComanda} 
+                    disabled={loading}
+                    className="w-full py-2 bg-transparent text-red-500 border border-red-900/30 font-bold rounded-lg hover:bg-red-950/20 transition-colors"
+                  >
+                    Cancelar Ficha
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -16,7 +16,6 @@ export default class DisponibilidadeRepository {
         `;
         let params = [];
         
-        // Se passar um ID, filtra só daquele barbeiro. Se não, traz de todos.
         if (profissionalId) {
             sql += " AND d.profissionalId = ?";
             params.push(profissionalId);
@@ -26,7 +25,6 @@ export default class DisponibilidadeRepository {
         return await this.#banco.ExecutaComando(sql, params);
     }
 
-    // REGRA DE SEGURANÇA: Evita que o barbeiro cadastre horários que se encavalam no mesmo dia
     async verificarConflito(profissionalId, diaSemana, horaInicio, horaFim, idIgnorar = 0) {
         let sql = `
             SELECT id FROM disponibilidade 

@@ -9,7 +9,6 @@ export default class DisponibilidadeController {
 
     async listar(req, res) {
         try {
-            // Permite filtrar passando ?profissionalId=1 na URL
             const profissionalId = req.query.profissionalId || null;
             let lista = await this.#repo.listar(profissionalId);
             
