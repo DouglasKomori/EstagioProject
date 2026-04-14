@@ -14,10 +14,11 @@ export default function AgendaAdmin() {
   const [listaProfissionais, setListaProfissionais] = useState<any[]>([]);
   const [listaServicos, setListaServicos] = useState<any[]>([]);
   
-  // === NOVO: ESTADOS PARA A LÓGICA DINÂMICA ===
+  // === ESTADOS PARA A LÓGICA DINÂMICA ===
   const [profissionalFiltro, setProfissionalFiltro] = useState<string>("");
   const [disponibilidades, setDisponibilidades] = useState<any[]>([]);
   const [horariosDinamicos, setHorariosDinamicos] = useState<string[]>([]);
+  const [horariosOcupadosArray, setHorariosOcupadosArray] = useState<string[]>([]); // Guarda os blocos bloqueados
   // ============================================
 
   // Estados do Modal
@@ -49,12 +50,10 @@ export default function AgendaAdmin() {
 
   const obterToken = () => localStorage.getItem("token") || "";
 
-  // Carrega os dados básicos na primeira vez que abre a tela
   useEffect(() => {
     carregarDadosBase();
   }, []);
 
-  // Quando o Admin seleciona uma data nova OU troca de profissional, recalcula tudo
   useEffect(() => {
     setDataVisualizacao(new Date(dataSelecionada.getFullYear(), dataSelecionada.getMonth(), 1));
     if (profissionalFiltro) {
@@ -62,6 +61,7 @@ export default function AgendaAdmin() {
     } else {
       setAgendamentos([]);
       setHorariosDinamicos([]);
+      setHorariosOcupadosArray([]);
     }
   }, [dataSelecionada, profissionalFiltro]);
 
@@ -75,7 +75,6 @@ export default function AgendaAdmin() {
       if(resPro.ok) {
         const profs = await resPro.json();
         setListaProfissionais(profs);
-        // Já deixa o primeiro barbeiro selecionado por padrão para facilitar
         if (profs.length > 0) setProfissionalFiltro(String(profs[0].id));
       }
 
@@ -87,24 +86,23 @@ export default function AgendaAdmin() {
   const carregarAgendamentosEHorarios = async () => {
     setLoading(true);
     try {
-      // 1. Busca os agendamentos do dia
       const ano = dataSelecionada.getFullYear();
       const mes = String(dataSelecionada.getMonth() + 1).padStart(2, '0');
       const dia = String(dataSelecionada.getDate()).padStart(2, '0');
       const dataFormatada = `${ano}-${mes}-${dia}`;
 
+      // 1. Busca Agendamentos
       const resAgendamentos = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos?data=${dataFormatada}`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       let agendamentosDia = [];
       if (resAgendamentos.ok) {
         agendamentosDia = await resAgendamentos.json();
-        // Filtra para exibir SÓ os agendamentos do barbeiro selecionado na tela
         agendamentosDia = agendamentosDia.filter((a: any) => a.profissionalId === Number(profissionalFiltro));
       }
       setAgendamentos(agendamentosDia);
 
-      // 2. Busca a Escala de Trabalho (Disponibilidade) do barbeiro
+      // 2. Busca Escala (Disponibilidade)
       const resDisp = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/disponibilidade?profissionalId=${profissionalFiltro}`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
@@ -114,15 +112,20 @@ export default function AgendaAdmin() {
         gerarHorariosDinamicos(dataSelecionada, disponibilidadesProf);
       }
 
+      // 3. Busca Horários Ocupados (Para colorir os blocos "comidos" pelo tempo)
+      const resOcupados = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/ocupados?data=${dataFormatada}&profissionalId=${profissionalFiltro}`, {
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+      if (resOcupados.ok) {
+        setHorariosOcupadosArray(await resOcupados.json());
+      }
+
     } catch (error) { console.error("Erro:", error); } 
     finally { setLoading(false); }
   };
 
-  // === A MÁGICA DOS HORÁRIOS DINÂMICOS ACONTECE AQUI ===
   const gerarHorariosDinamicos = (dataReferencia: Date, dispProfissional: any[]) => {
-    const diaSemana = dataReferencia.getDay(); // 0 (Dom) a 6 (Sáb)
-    
-    // Pega só os turnos que o barbeiro cadastrou para este dia da semana
+    const diaSemana = dataReferencia.getDay(); 
     const turnosDoDia = dispProfissional.filter(d => d.diaSemana === diaSemana);
     
     let slotsGerados: string[] = [];
@@ -137,14 +140,11 @@ export default function AgendaAdmin() {
       let dataFimTurno = new Date();
       dataFimTurno.setHours(hFim, mFim, 0, 0);
 
-      // Vai fatiando o turno de 30 em 30 minutos
       while (dataAtual < dataFimTurno) {
         slotsGerados.push(dataAtual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
         dataAtual.setMinutes(dataAtual.getMinutes() + 30);
       }
     });
-
-    // Remove duplicatas (caso cadastre errado) e ordena as horas
     setHorariosDinamicos([...new Set(slotsGerados)].sort());
   };
 
@@ -226,7 +226,7 @@ export default function AgendaAdmin() {
     
     setClienteSelecionado("");
     setBuscaCliente("");
-    setProfissionalSelecionado(profissionalFiltro); // Já trava no barbeiro que está sendo visualizado
+    setProfissionalSelecionado(profissionalFiltro);
     setServicosSelecionados([]);
     setObservacao("");
     setErroModal("");
@@ -385,6 +385,7 @@ export default function AgendaAdmin() {
               <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">Legenda</h3>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-zinc-800 border border-zinc-700"></span> Horário Livre</li>
+                <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500"></span> Em Atendimento</li>
                 <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-blue-500/20 border border-blue-500"></span> Agendado</li>
                 <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500"></span> Concluído</li>
                 <li className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500"></span> Cancelado</li>
@@ -424,6 +425,9 @@ export default function AgendaAdmin() {
                   if (!agendamento && agendamentosDaHora.length > 0) agendamento = agendamentosDaHora[0]; 
 
                   const passouDaHora = !agendamento && isHoraPassada(hora); 
+                  
+                  // Verifica se o horário faz parte de um "bloco ocupado" (no meio de um atendimento)
+                  const isEmAtendimento = !agendamento && horariosOcupadosArray.includes(hora) && !passouDaHora;
 
                   let bgClass = "bg-zinc-950 border-zinc-800 hover:border-[#E4B77D]/50";
                   let textClass = "text-zinc-500";
@@ -432,6 +436,10 @@ export default function AgendaAdmin() {
                     if (agendamento.status === "AGENDADO") { bgClass = "bg-blue-950/30 border-blue-900/50"; textClass = "text-blue-400"; } 
                     else if (agendamento.status === "CONCLUIDO") { bgClass = "bg-green-950/30 border-green-900/50 opacity-60"; textClass = "text-green-400"; } 
                     else if (agendamento.status === "CANCELADO") { bgClass = "bg-red-950/20 border-red-900/30 opacity-50"; textClass = "text-red-400"; }
+                  } else if (isEmAtendimento) {
+                    // Cadeira já está ocupada por um serviço longo (Admin AVISO VISUAL)
+                    bgClass = "bg-yellow-950/10 border-yellow-900/30 hover:border-[#E4B77D]/50"; 
+                    textClass = "text-yellow-600";
                   } else if (passouDaHora) {
                     bgClass = "bg-zinc-900/30 border-zinc-900 opacity-50 pointer-events-none";
                   }
@@ -440,7 +448,7 @@ export default function AgendaAdmin() {
 
                   return (
                     <div key={hora} className={`flex items-stretch border rounded-lg transition-all group ${bgClass}`}>
-                      <div className={`w-20 p-4 flex flex-col items-center justify-center border-r border-zinc-800/50 font-mono font-bold text-lg ${agendamento && agendamento.status !== "CANCELADO" ? textClass : (passouDaHora ? 'text-zinc-700 line-through' : 'text-zinc-500 group-hover:text-[#E4B77D]')}`}>
+                      <div className={`w-20 p-4 flex flex-col items-center justify-center border-r border-zinc-800/50 font-mono font-bold text-lg ${agendamento && agendamento.status !== "CANCELADO" ? textClass : (passouDaHora ? 'text-zinc-700 line-through' : isEmAtendimento ? textClass : 'text-zinc-500 group-hover:text-[#E4B77D]')}`}>
                         {hora}
                       </div>
 
@@ -459,8 +467,8 @@ export default function AgendaAdmin() {
                               )}
                           </div>
                         ) : (
-                          <span className={`italic text-sm transition-colors ${passouDaHora ? 'text-zinc-700' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
-                            {passouDaHora ? "Horário indisponível (já passou)" : "Horário disponível..."}
+                          <span className={`italic text-sm transition-colors ${passouDaHora ? 'text-zinc-700' : isEmAtendimento ? 'text-yellow-600/80 font-medium' : 'text-zinc-600 group-hover:text-zinc-400'}`}>
+                            {passouDaHora ? "Horário indisponível (já passou)" : isEmAtendimento ? "Horário Ocupado (Em atendimento)" : "Horário disponível..."}
                           </span>
                         )}
 
@@ -476,6 +484,7 @@ export default function AgendaAdmin() {
                             </>
                           )}
                           
+                          {/* Botão Agendar (Encaixe livre pro Admin!) */}
                           {isDisponivelParaAgendar && !passouDaHora && (
                               <button onClick={() => abrirModal(hora)} className="px-4 py-2 text-sm font-bold bg-zinc-800 text-[#E4B77D] rounded-md hover:bg-zinc-700 transition-colors border border-zinc-700">
                                 Agendar
@@ -526,7 +535,6 @@ export default function AgendaAdmin() {
 
                 <div className="flex-[2]">
                   <label className="block text-sm font-medium text-zinc-300 mb-1">Profissional</label>
-                  {/* O barbeiro já vem pré-selecionado e travado para evitar confusão */}
                   <select 
                     value={profissionalSelecionado} disabled required
                     className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-3 text-white opacity-70 appearance-none cursor-not-allowed"

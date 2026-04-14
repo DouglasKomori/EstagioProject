@@ -97,4 +97,40 @@ export default class ComandaRepository {
         let sql = "UPDATE comanda SET status = 'CANCELADA', dataFechamento = NOW() WHERE id = ?";
         return await this.#banco.ExecutaComandoNonQuery(sql, [idComanda]);
     }
+
+    async relatorioFaturamento(dataInicio, dataFim, profissionalId) {
+        let sql = `
+            SELECT
+                c.id as comandaId,
+                c.numero_comanda,
+                c.dataFechamento,
+                cli.nome as clienteNome,
+                cs.valorCobrado,
+                s.nome as servicoNome,
+                p.nome as profissionalNome,
+                p.id as profissionalId
+            FROM comanda_servico cs
+            INNER JOIN comanda c ON cs.comandaId = c.id
+            INNER JOIN servico s ON cs.servicoId = s.id
+            INNER JOIN pessoa p ON cs.profissionalId = p.id
+            INNER JOIN cliente cli ON c.clienteId = cli.id
+            WHERE c.status = 'PAGA'
+        `;
+        
+        let params = [];
+
+        if (dataInicio && dataFim) {
+            sql += " AND DATE(c.dataFechamento) BETWEEN ? AND ?";
+            params.push(dataInicio, dataFim);
+        }
+        
+        if (profissionalId) {
+            sql += " AND p.id = ?";
+            params.push(profissionalId);
+        }
+
+        sql += " ORDER BY c.dataFechamento DESC";
+
+        return await this.#banco.ExecutaComando(sql, params);
+    }
 }

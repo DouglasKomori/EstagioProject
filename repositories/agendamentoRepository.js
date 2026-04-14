@@ -47,11 +47,19 @@ export default class AgendamentoRepository {
     }
 
     async listarHorariosOcupados(profissionalId, dataInicio, dataFim) {
-        let sql = `SELECT dataHora FROM agendamento 
-                   WHERE profissionalId = ? 
-                   AND dataHora BETWEEN ? AND ? 
-                   AND status = 'AGENDADO' 
-                   AND ativo = 1`;
+        let sql = `
+            SELECT 
+                a.dataHora, 
+                COALESCE(SUM(s.tempoEstimadoMinutos), 30) as tempoTotal
+            FROM agendamento a
+            LEFT JOIN agendamento_servico aserv ON a.id = aserv.agendamentoId
+            LEFT JOIN servico s ON aserv.servicoId = s.id
+            WHERE a.profissionalId = ? 
+              AND a.dataHora BETWEEN ? AND ? 
+              AND a.status = 'AGENDADO' 
+              AND a.ativo = 1
+            GROUP BY a.id, a.dataHora
+        `;
         return await this.#banco.ExecutaComando(sql, [profissionalId, dataInicio, dataFim]);
     }
 

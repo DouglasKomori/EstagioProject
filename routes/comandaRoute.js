@@ -33,6 +33,15 @@ router.post("/adicionar-item", auth.validarFuncionario, (req,res) => {
     ctrl.adicionarItem(req,res);
 });
 
+router.get("/relatorio/faturamento", auth.validarFuncionario, (req,res) => {
+    /* #swagger.security = [{
+    "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Comandas - FUNCIONARIO']
+    // #swagger.summary = "Gera um relatório de faturamento por período"
+    ctrl.relatorio(req,res);
+});
+
 router.get("/:id", auth.validarFuncionario, (req,res) => {
     /* #swagger.security = [{
     "bearerAuth": []

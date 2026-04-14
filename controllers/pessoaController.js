@@ -1,5 +1,38 @@
 import PessoaRepository from "../repositories/pessoaRepository.js";
 
+// === FUNÇÃO MATEMÁTICA DE VALIDAÇÃO DE CPF ===
+function validarCPF(cpf) {
+    if (!cpf) return false;
+    
+    // Tira tudo que não for número (pontos e traços)
+    cpf = cpf.replace(/[^\d]+/g, ''); 
+    
+    // Rejeita se não tiver 11 dígitos ou se for uma sequência repetida (ex: 111.111.111-11)
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false; 
+
+    let soma = 0;
+    let resto;
+
+    // Valida o 1º Dígito Verificador
+    for (let i = 1; i <= 9; i++) {
+        soma = soma + parseInt(cpf.substring(i-1, i)) * (11 - i);
+    }
+    resto = (soma * 10) % 11;
+    if ((resto === 10) || (resto === 11)) resto = 0;
+    if (resto !== parseInt(cpf.substring(9, 10))) return false;
+
+    // Valida o 2º Dígito Verificador
+    soma = 0;
+    for (let i = 1; i <= 10; i++) {
+        soma = soma + parseInt(cpf.substring(i-1, i)) * (12 - i);
+    }
+    resto = (soma * 10) % 11;
+    if ((resto === 10) || (resto === 11)) resto = 0;
+    if (resto !== parseInt(cpf.substring(10, 11))) return false;
+
+    return true;
+}
+
 export default class PessoaController {
     #repoPessoa;
 
@@ -28,8 +61,14 @@ export default class PessoaController {
                 return res.status(400).json({msg: "Nome e Tipo da pessoa são obrigatórios!"});
             }
 
-            if(tipoPessoa === 'PF' && !cpf) {
-                return res.status(400).json({msg: "Para Pessoa Física, o CPF é obrigatório!"});
+            // === NOVA TRAVA: VALIDAÇÃO DE CPF AQUI ===
+            if(tipoPessoa === 'PF') {
+                if(!cpf) {
+                    return res.status(400).json({msg: "Para Pessoa Física, o CPF é obrigatório!"});
+                }
+                if(!validarCPF(cpf)) {
+                    return res.status(400).json({msg: "O CPF informado é inválido! Verifique a digitação."});
+                }
             }
 
             if(tipoPessoa === 'PJ' && !cnpj) {
@@ -69,6 +108,16 @@ export default class PessoaController {
                 return res.status(400).json({msg: "Informe o ID, nome e tipo para alterar!"});
             }
             
+            // === NOVA TRAVA: VALIDAÇÃO DE CPF AQUI ===
+            if(tipoPessoa === 'PF') {
+                if(!cpf) {
+                    return res.status(400).json({msg: "Para Pessoa Física, o CPF é obrigatório!"});
+                }
+                if(!validarCPF(cpf)) {
+                    return res.status(400).json({msg: "O CPF informado é inválido! Verifique a digitação."});
+                }
+            }
+
             if (email) {
                 const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (!regexEmail.test(email)) {

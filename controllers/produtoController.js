@@ -33,9 +33,9 @@ export default class ProdutoController {
                 return res.status(400).json({msg: "Informe nome, descrição, preço de custo, preço de venda, quantidade em estoque e a marca para cadastrar um produto!"});
             }
 
-            const existe = await this.#repoProdutos.verificarNomeExistente(nome);
+            const existe = await this.#repoProdutos.verificarNomeExistente(nome, marcaId);
             if (existe) {
-                return res.status(400).json({msg: "Já existe um produto cadastrado com este nome!"});
+                return res.status(400).json({msg: "Esta marca já possui um produto cadastrado com este mesmo nome!"});
             }
 
             const result = await this.#repoProdutos.cadastrar({nome, descricao, precoCusto, precoVenda, quantidadeEstoque, marcaId});
@@ -61,9 +61,9 @@ export default class ProdutoController {
                 return res.status(400).json({msg: "Informe id, nome, descrição, preço de custo, preço de venda, quantidade em estoque e a marca para alterar um produto!"});
             }
 
-            const existe = await this.#repoProdutos.verificarNomeExistente(nome, id);
+            const existe = await this.#repoProdutos.verificarNomeExistente(nome, marcaId, id);
             if (existe) {
-                return res.status(400).json({msg: "Este nome já está sendo usado por outro produto!"});
+                return res.status(400).json({msg: "Esta marca já possui outro produto com este nome!"});
             }
 
             const result = await this.#repoProdutos.alterar({id, nome, descricao, precoCusto, precoVenda, quantidadeEstoque, marcaId});

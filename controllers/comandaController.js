@@ -109,4 +109,16 @@ export default class ComandaController {
             return res.status(500).json({ msg: "Erro ao cancelar a comanda." });
         }
     }
+
+    async relatorio(req, res) {
+        try {
+            let { dataInicio, dataFim, profissionalId } = req.query;
+            
+            let lista = await this.#repo.relatorioFaturamento(dataInicio, dataFim, profissionalId);
+            return res.status(200).json(lista);
+        } catch (exception) {
+            console.error(exception);
+            return res.status(500).json({ msg: "Erro ao gerar relatório de faturamento." });
+        }
+    }
 }

@@ -33,9 +33,9 @@ export default class produtoRepository {
         return lista;
     }
 
-    async verificarNomeExistente(nome, idIgnorar = 0) {
-        let sql = "SELECT id FROM produto WHERE LOWER(nome) = LOWER(?) AND id != ?";
-        let rows = await this.#banco.ExecutaComando(sql, [nome, idIgnorar]);
+    async verificarNomeExistente(nome, marcaId, idIgnorar = 0) {
+        let sql = "SELECT id FROM produto WHERE LOWER(nome) = LOWER(?) AND marcaId = ? AND id != ?";
+        let rows = await this.#banco.ExecutaComando(sql, [nome, marcaId, idIgnorar]);
         return rows.length > 0; 
     }
 

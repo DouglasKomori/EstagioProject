@@ -157,9 +157,25 @@ export default class AgendamentoController {
             let dataFim = `${data} 23:59:59`;
 
             let rows = await this.#repo.listarHorariosOcupados(profissionalId, dataInicio, dataFim);
-            let ocupados = rows.map(r => {
-                const d = new Date(r.dataHora);
-                return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            let ocupados = [];
+
+            rows.forEach(r => {
+                let dataAtual = new Date(r.dataHora);
+                let tempoTotal = parseInt(r.tempoTotal) || 30;
+                
+                let blocosConsumidos = Math.ceil(tempoTotal / 30);
+
+                for (let i = 0; i < blocosConsumidos; i++) {
+                    let h = String(dataAtual.getHours()).padStart(2, '0');
+                    let m = String(dataAtual.getMinutes()).padStart(2, '0');
+                    let slotStr = `${h}:${m}`;
+                    
+                    if (!ocupados.includes(slotStr)) {
+                        ocupados.push(slotStr);
+                    }
+                    
+                    dataAtual.setMinutes(dataAtual.getMinutes() + 30);
+                }
             });
 
             const bloqueios = await this.#repoBloqueio.listar(false);
