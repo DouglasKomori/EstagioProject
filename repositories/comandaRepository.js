@@ -67,9 +67,9 @@ export default class ComandaRepository {
         };
     }
 
-    async fecharComanda(idComanda) {
-        let sql = "UPDATE comanda SET status = 'PAGA', dataFechamento = NOW() WHERE id = ?";
-        return await this.#banco.ExecutaComandoNonQuery(sql, [idComanda]);
+    async fecharComanda(idComanda, caixaId) {
+        let sql = "UPDATE comanda SET status = 'PAGA', dataFechamento = NOW(), caixaId = ? WHERE id = ?";
+        return await this.#banco.ExecutaComandoNonQuery(sql, [caixaId, idComanda]);
     }
 
     async listarAbertas() {
@@ -100,36 +100,62 @@ export default class ComandaRepository {
 
     async relatorioFaturamento(dataInicio, dataFim, profissionalId) {
         let sql = `
-            SELECT
-                c.id as comandaId,
-                c.numero_comanda,
-                c.dataFechamento,
-                cli.nome as clienteNome,
-                cs.valorCobrado,
-                s.nome as servicoNome,
-                p.nome as profissionalNome,
-                p.id as profissionalId
-            FROM comanda_servico cs
-            INNER JOIN comanda c ON cs.comandaId = c.id
-            INNER JOIN servico s ON cs.servicoId = s.id
-            INNER JOIN pessoa p ON cs.profissionalId = p.id
-            INNER JOIN cliente cli ON c.clienteId = cli.id
-            WHERE c.status = 'PAGA'
+            SELECT * FROM (
+                -- -----------------------------------------
+                -- PARTE 1: BUSCA OS SERVIÇOS
+                -- -----------------------------------------
+                SELECT
+                    c.id as comandaId,
+                    c.numero_comanda,
+                    c.dataFechamento,
+                    cli.nome as clienteNome,
+                    cs.valorCobrado as valorCobrado,
+                    s.nome as servicoNome,
+                    p.nome as profissionalNome,
+                    p.id as profissionalId
+                FROM comanda_servico cs
+                INNER JOIN comanda c ON cs.comandaId = c.id
+                INNER JOIN servico s ON cs.servicoId = s.id
+                INNER JOIN pessoa p ON cs.profissionalId = p.id
+                INNER JOIN cliente cli ON c.clienteId = cli.id
+                WHERE c.status = 'PAGA'
+
+                UNION ALL
+
+                -- -----------------------------------------
+                -- PARTE 2: BUSCA OS PRODUTOS
+                -- -----------------------------------------
+                SELECT
+                    c.id as comandaId,
+                    c.numero_comanda,
+                    c.dataFechamento,
+                    cli.nome as clienteNome,
+                    (cp.valorCobrado * cp.quantidade) as valorCobrado,
+                    CONCAT(pr.nome, ' (', cp.quantidade, 'x)') as servicoNome,
+                    'Balcão / Barbearia' as profissionalNome,
+                    NULL as profissionalId
+                FROM comanda_produto cp
+                INNER JOIN comanda c ON cp.comandaId = c.id
+                INNER JOIN produto pr ON cp.produtoId = pr.id
+                INNER JOIN cliente cli ON c.clienteId = cli.id
+                WHERE c.status = 'PAGA'
+            ) as relatorio
+            WHERE 1=1
         `;
         
         let params = [];
 
         if (dataInicio && dataFim) {
-            sql += " AND DATE(c.dataFechamento) BETWEEN ? AND ?";
+            sql += " AND DATE(dataFechamento) BETWEEN ? AND ?";
             params.push(dataInicio, dataFim);
         }
         
         if (profissionalId) {
-            sql += " AND p.id = ?";
+            sql += " AND profissionalId = ?";
             params.push(profissionalId);
         }
 
-        sql += " ORDER BY c.dataFechamento DESC";
+        sql += " ORDER BY dataFechamento DESC";
 
         return await this.#banco.ExecutaComando(sql, params);
     }

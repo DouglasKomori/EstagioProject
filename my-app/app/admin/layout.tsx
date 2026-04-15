@@ -71,7 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-6 flex flex-col h-full overflow-y-auto custom-scrollbar">
           
           {/* Cabeçalho do Menu Lateral */}
-          <div className="flex justify-between items-center mb-8 pb-4 border-b border-zinc-900 shrink-0">
+          <div className="flex justify-between items-center mb-6 pb-4 border-b border-zinc-900 shrink-0">
             <span className="text-[#E4B77D] font-bold tracking-widest text-sm uppercase">Painel Admin</span>
             <button 
               onClick={() => setMenuAberto(false)}

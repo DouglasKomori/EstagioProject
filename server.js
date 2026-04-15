@@ -15,6 +15,7 @@ import agendaRoute from './routes/agendaRoute.js';
 import bloqueioRoute from './routes/bloqueioRoute.js';
 import disponibilidadeRoute from './routes/disponibilidadeRoute.js';
 import comandaRoute from './routes/comandaRoute.js';
+import caixaRoute from './routes/caixaRoute.js';
 
 const require = createRequire(import.meta.url);
 const outputJson = require("./swaggerOutput.json");
@@ -42,6 +43,7 @@ server.use("/agendamentos", agendaRoute);
 server.use("/bloqueios", bloqueioRoute);
 server.use("/disponibilidade", disponibilidadeRoute);
 server.use("/comandas", comandaRoute);
+server.use("/caixas", caixaRoute);
 
 server.listen(PORT, function() {
     console.log(`backend em funcionamento na porta ${PORT}!`);

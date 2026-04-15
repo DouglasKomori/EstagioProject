@@ -1,4 +1,5 @@
 import ComandaRepository from "../repositories/comandaRepository.js";
+import CaixaRepository from "../repositories/caixaRepository.js";
 
 export default class ComandaController {
     #repo;
@@ -61,10 +62,19 @@ export default class ComandaController {
     async finalizarComanda(req, res) {
         try {
             let id = req.params.id;
-            const result = await this.#repo.fecharComanda(id);
-            if (result) res.status(200).json({ msg: "Comanda finalizada e paga!" });
-            else res.status(400).json({ msg: "Erro ao finalizar comanda." });
+            const repoCaixa = new CaixaRepository();
+            const caixaAberto = await repoCaixa.buscarCaixaAberto();
+            
+            if (!caixaAberto) {
+                return res.status(400).json({ msg: "Abra o caixa do dia antes de receber pagamentos!" });
+            }
+
+            const result = await this.#repo.fecharComanda(id, caixaAberto.id);
+            
+            if (result) return res.status(200).json({ msg: "Comanda finalizada e paga!" });
+            else return res.status(400).json({ msg: "Erro ao finalizar comanda." });
         } catch (exception) {
+            console.error(exception);
             return res.status(500).json({ msg: "Erro ao finalizar." });
         }
     }
