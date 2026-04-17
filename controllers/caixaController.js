@@ -25,7 +25,6 @@ export default class CaixaController {
         try {
             let { saldoInicial } = req.body;
             
-            // Mantendo a sua nomenclatura de variável: profissionalId
             let profissionalId = req.usuarioLogado.id; 
 
             if (saldoInicial === undefined || saldoInicial === null) {
@@ -41,7 +40,6 @@ export default class CaixaController {
                 return res.status(400).json({ msg: "Atenção: Já existe um caixa aberto no momento!" });
             }
 
-            // Enviando o profissionalId para o repositório
             const result = await this.#repo.abrir(Number(saldoInicial), profissionalId);
             if (result) {
                 return res.status(201).json({ msg: "Caixa aberto com sucesso!" });
@@ -60,7 +58,6 @@ export default class CaixaController {
             const caixa = await this.#repo.buscarCaixaAberto();
             if (!caixa) return res.status(400).json({ msg: "Não há nenhum caixa aberto no momento." });
 
-            // Buscando as comandas pelo ID do caixa
             const faturamento = await this.#repo.calcularFaturamento(caixa.id);
             const saldoFinalEsperado = Number(caixa.saldoInicial) + Number(faturamento);
 
@@ -92,6 +89,16 @@ export default class CaixaController {
         } catch (exception) {
             console.error(exception);
             return res.status(500).json({ msg: "Erro interno ao fechar o caixa." });
+        }
+    }
+
+    async historico(req, res) {
+        try {
+            const lista = await this.#repo.listarHistorico();
+            return res.status(200).json(lista);
+        } catch (exception) {
+            console.error(exception);
+            return res.status(500).json({ msg: "Erro ao buscar histórico de caixas." });
         }
     }
 }

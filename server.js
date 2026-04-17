@@ -16,6 +16,7 @@ import bloqueioRoute from './routes/bloqueioRoute.js';
 import disponibilidadeRoute from './routes/disponibilidadeRoute.js';
 import comandaRoute from './routes/comandaRoute.js';
 import caixaRoute from './routes/caixaRoute.js';
+import movimentacaoRoute from './routes/movimentacaoRoute.js';
 
 const require = createRequire(import.meta.url);
 const outputJson = require("./swaggerOutput.json");
@@ -44,6 +45,7 @@ server.use("/bloqueios", bloqueioRoute);
 server.use("/disponibilidade", disponibilidadeRoute);
 server.use("/comandas", comandaRoute);
 server.use("/caixas", caixaRoute);
+server.use('/estoque', movimentacaoRoute);
 
 server.listen(PORT, function() {
     console.log(`backend em funcionamento na porta ${PORT}!`);

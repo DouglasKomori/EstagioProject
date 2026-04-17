@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+// 1. Importação do Componente Novo
+import MovimentacaoEstoqueModal from "../../components/MovimentacaoEstoqueModal"; // Ajuste o caminho se necessário
 
 export default function GerenciarProdutos() {
   const [produtos, setProdutos] = useState<any[]>([]);
@@ -9,6 +11,10 @@ export default function GerenciarProdutos() {
   const [modalAberto, setModalAberto] = useState(false);
   const [loading, setLoading] = useState(false);
   
+  // 2. Estados para o Modal de Estoque
+  const [modalMovimentacaoAberto, setModalMovimentacaoAberto] = useState(false);
+  const [produtoSelecionado, setProdutoSelecionado] = useState<any>(null);
+
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [busca, setBusca] = useState("");
@@ -20,7 +26,7 @@ export default function GerenciarProdutos() {
   const [descricao, setDescricao] = useState("");
   const [precoCusto, setPrecoCusto] = useState("");
   const [precoVenda, setPrecoVenda] = useState("");
-  const [quantidadeEstoque, setQuantidadeEstoque] = useState("");
+  const [quantidadeEstoque, setQuantidadeEstoque] = useState(""); // Mantido apenas para criação de NOVO produto
   const [marcaId, setMarcaId] = useState("");
 
   useEffect(() => {
@@ -72,7 +78,7 @@ export default function GerenciarProdutos() {
     setDescricao("");
     setPrecoCusto("");
     setPrecoVenda("");
-    setQuantidadeEstoque("");
+    setQuantidadeEstoque(""); // Zerado para cadastro
     setMarcaId("");
     setErro("");
     setModalAberto(true);
@@ -84,10 +90,16 @@ export default function GerenciarProdutos() {
     setDescricao(produto.descricao);
     setPrecoCusto(produto.precoCusto);
     setPrecoVenda(produto.precoVenda);
-    setQuantidadeEstoque(produto.quantidadeEstoque);
+    // IMPORTANTE: setQuantidadeEstoque NÃO é preenchido aqui para edição, pois a edição será via Modal de Movimentação.
+    setQuantidadeEstoque(produto.quantidadeEstoque); 
     setMarcaId(produto.marcaId ? String(produto.marcaId) : ""); 
     setErro("");
     setModalAberto(true);
+  };
+
+  const abrirModalMovimentacao = (produto: any) => {
+    setProdutoSelecionado(produto);
+    setModalMovimentacaoAberto(true);
   };
 
   const exibirSucesso = (mensagem: string) => {
@@ -115,7 +127,9 @@ export default function GerenciarProdutos() {
           descricao, 
           precoCusto: Number(precoCusto), 
           precoVenda: Number(precoVenda), 
-          quantidadeEstoque: Number(quantidadeEstoque),
+          // Se for edição (tem ID), a API vai ignorar esse campo na maioria das arquiteturas seguras, ou manter o atual.
+          // Se for novo, vai enviar o saldo inicial.
+          quantidadeEstoque: id ? undefined : Number(quantidadeEstoque), 
           marcaId: Number(marcaId) 
         }),
       });
@@ -316,7 +330,21 @@ export default function GerenciarProdutos() {
                     </td>
 
                     <td className="p-4 text-right whitespace-nowrap">
-                      <div className="flex justify-end gap-4">
+                      <div className="flex justify-end gap-4 items-center">
+                        
+                        {/* 3. BOTÃO DE ESTOQUE - Apenas para produtos ativos */}
+                        {produto.ativo !== 0 && (
+                          <button 
+                            onClick={() => abrirModalMovimentacao(produto)}
+                            className="text-sm text-emerald-500 hover:text-emerald-400 transition-colors font-bold tracking-wide"
+                            title="Ajustar Estoque"
+                          >
+                            + Estoque
+                          </button>
+                        )}
+                        
+                        <div className="w-px h-4 bg-zinc-800"></div>
+
                         <button 
                           onClick={() => abrirModalEditar(produto)}
                           className="text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium"
@@ -351,7 +379,7 @@ export default function GerenciarProdutos() {
         </div>
       </main>
 
-      {/* MODAL */}
+      {/* MODAL DE EDIÇÃO / CADASTRO */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setModalAberto(false)} />
@@ -389,14 +417,17 @@ export default function GerenciarProdutos() {
                   </select>
                 </div>
 
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-zinc-300 mb-1">Estoque</label>
-                  <input 
-                    type="number" required min="0" value={quantidadeEstoque} onChange={(e) => setQuantidadeEstoque(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-3 text-white focus:outline-none focus:border-[#E4B77D]"
-                    placeholder="0"
-                  />
-                </div>
+                {/* 4. CAMPO DE ESTOQUE - Aparece SOMENTE na criação de um NOVO produto */}
+                {!id && (
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-zinc-300 mb-1">Estoque Inicial</label>
+                    <input 
+                      type="number" required min="0" value={quantidadeEstoque} onChange={(e) => setQuantidadeEstoque(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-3 text-white focus:outline-none focus:border-[#E4B77D]"
+                      placeholder="0"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -445,6 +476,18 @@ export default function GerenciarProdutos() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* 5. MODAL DE MOVIMENTAÇÃO DE ESTOQUE */}
+      {modalMovimentacaoAberto && produtoSelecionado && (
+        <MovimentacaoEstoqueModal
+          produto={produtoSelecionado}
+          onClose={() => setModalMovimentacaoAberto(false)}
+          onSuccess={() => {
+            carregarProdutos(); // Atualiza a tabela após a movimentação
+            exibirSucesso("Estoque atualizado com sucesso!");
+          }}
+        />
       )}
 
     </div>

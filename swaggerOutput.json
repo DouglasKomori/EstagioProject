@@ -3016,6 +3016,148 @@
           }
         ]
       }
+    },
+    "/caixas/historico": {
+      "get": {
+        "tags": [
+          "Caixa - FUNCIONARIO"
+        ],
+        "summary": "Lista os últimos 30 caixas fechados, com detalhes de faturamento e datas",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/estoque/": {
+      "post": {
+        "tags": [
+          "Movimentações - FUNCIONARIO"
+        ],
+        "summary": "Realiza uma movimentação de estoque",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "produtoId": {
+                    "example": "any"
+                  },
+                  "tipo": {
+                    "example": "any"
+                  },
+                  "quantidade": {
+                    "example": "any"
+                  },
+                  "motivo": {
+                    "example": "any"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/estoque/{produto}": {
+      "get": {
+        "tags": [
+          "Movimentações - FUNCIONARIO"
+        ],
+        "summary": "Consulta o histórico de movimentações de um produto",
+        "description": "",
+        "parameters": [
+          {
+            "name": "produto",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
     }
   },
   "components": {

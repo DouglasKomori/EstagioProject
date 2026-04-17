@@ -43,4 +43,21 @@ export default class CaixaRepository {
         let sql = "UPDATE caixa SET status = 'FECHADO', dataFechamento = NOW(), saldoFinal = ? WHERE id = ?";
         return await this.#banco.ExecutaComandoNonQuery(sql, [saldoFinalCalculado, idCaixa]);
     }
+
+    async listarHistorico() {
+        let sql = `
+            SELECT 
+                id, 
+                dataAbertura, 
+                dataFechamento, 
+                saldoInicial, 
+                saldoFinal,
+                (saldoFinal - saldoInicial) as faturamento
+            FROM caixa 
+            WHERE status = 'FECHADO' 
+            ORDER BY dataFechamento DESC 
+            LIMIT 30
+        `;
+        return await this.#banco.ExecutaComando(sql);
+    }
 }

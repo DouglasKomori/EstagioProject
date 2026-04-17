@@ -42,4 +42,13 @@ router.put("/fechar", auth.validarFuncionario, (req,res) => {
     ctrl.fechar(req,res);
 });
 
+router.get("/historico", auth.validarFuncionario, (req,res) => {
+    /* #swagger.security = [{
+    "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Caixa - FUNCIONARIO']
+    // #swagger.summary = "Lista os últimos 30 caixas fechados, com detalhes de faturamento e datas"
+    ctrl.historico(req,res);
+});
+
 export default router;
