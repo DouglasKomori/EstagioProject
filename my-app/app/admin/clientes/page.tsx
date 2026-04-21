@@ -1,18 +1,30 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+// IMPORTAÇÃO DO NOSSO NOVO COMPONENTE
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function GerenciarClientes() {
   const [clientes, setClientes] = useState<any[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  const [erro, setErro] = useState("");
+  const [erro, setErro] = useState(""); 
+  const [erroPrincipal, setErroPrincipal] = useState(""); 
   const [sucesso, setSucesso] = useState("");
   const [busca, setBusca] = useState("");
 
   const [mostrarInativos, setMostrarInativos] = useState(false);
 
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    titulo: "",
+    mensagem: "",
+    tipo: "atencao" as "atencao" | "perigo",
+    onConfirm: () => {}
+  });
+
+  // Campos do Formulário
   const [id, setId] = useState("");
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -71,6 +83,11 @@ export default function GerenciarClientes() {
     setTimeout(() => setSucesso(""), 3000);
   };
 
+  const exibirErroPrincipal = (mensagem: string) => {
+    setErroPrincipal(mensagem);
+    setTimeout(() => setErroPrincipal(""), 4000);
+  };
+
   const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let valor = e.target.value.replace(/\D/g, "");
     if (valor.length > 11) valor = valor.slice(0, 11);
@@ -117,9 +134,18 @@ export default function GerenciarClientes() {
     }
   };
 
-  const excluirCliente = async (idExclusao: string) => {
-    if (!window.confirm("Atenção: Tem certeza que deseja inativar este cliente do sistema?")) return;
+  const abrirModalInativar = (idExclusao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Inativar Cliente?",
+      mensagem: "Atenção: Tem certeza que deseja inativar este cliente do sistema?",
+      tipo: "perigo", // Botão vermelho!
+      onConfirm: () => efetivarInativacao(idExclusao)
+    });
+  };
 
+  const efetivarInativacao = async (idExclusao: string) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario/${idExclusao}`, {
         method: "DELETE",
@@ -130,16 +156,26 @@ export default function GerenciarClientes() {
         carregarClientes();
         exibirSucesso("Cliente inativado com sucesso!");
       } else {
-        alert("Não foi possível inativar o cliente.");
+        exibirErroPrincipal("Não foi possível inativar o cliente.");
       }
     } catch (error) {
       console.error("Erro ao excluir", error);
+      exibirErroPrincipal("Erro de conexão ao tentar inativar.");
     }
   };
 
-  const reativarCliente = async (idReativacao: string) => {
-    if (!window.confirm("Deseja reativar este cliente? Ele poderá acessar o sistema e agendar novamente.")) return;
+  const abrirModalReativar = (idReativacao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Reativar Cliente?",
+      mensagem: "Deseja reativar este cliente? Ele poderá acessar o sistema e agendar novamente.",
+      tipo: "atencao", // Botão dourado padrão
+      onConfirm: () => efetivarReativacao(idReativacao)
+    });
+  };
 
+  const efetivarReativacao = async (idReativacao: string) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario/${idReativacao}/reativar`, {
         method: "PUT",
@@ -150,12 +186,15 @@ export default function GerenciarClientes() {
         carregarClientes();
         exibirSucesso("Cliente reativado com sucesso!");
       } else {
-        alert("Não foi possível reativar o cliente.");
+        exibirErroPrincipal("Não foi possível reativar o cliente.");
       }
     } catch (error) {
       console.error("Erro ao reativar", error);
+      exibirErroPrincipal("Erro de conexão ao tentar reativar.");
     }
   };
+
+  // ==========================================
 
   const clientesFiltrados = clientes.filter((c) => 
     c.nome.toLowerCase().includes(busca.toLowerCase()) || 
@@ -184,12 +223,22 @@ export default function GerenciarClientes() {
         </div>
       </header>
 
+      {/* FEEDBACKS VISUAIS NA TELA PRINCIPAL */}
       {sucesso && (
         <div className="max-w-6xl mx-auto mb-6 bg-green-950/50 border border-green-900 text-green-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
           <span className="font-medium">{sucesso}</span>
+        </div>
+      )}
+
+      {erroPrincipal && (
+        <div className="max-w-6xl mx-auto mb-6 bg-red-950/50 border border-red-900 text-red-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span className="font-medium">{erroPrincipal}</span>
         </div>
       )}
 
@@ -282,17 +331,17 @@ export default function GerenciarClientes() {
                           Editar
                         </button>
                         
-                        {/* Lógica Condicional: Se ativo=true mostra Inativar, se ativo=false mostra Reativar */}
+                        {/* Lógica Condicional baseada no modal */}
                         {cliente.ativo !== false ? (
                           <button 
-                            onClick={() => excluirCliente(cliente.id)}
+                            onClick={() => abrirModalInativar(cliente.id)}
                             className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium"
                           >
                             Inativar
                           </button>
                         ) : (
                           <button 
-                            onClick={() => reativarCliente(cliente.id)}
+                            onClick={() => abrirModalReativar(cliente.id)}
                             className="text-sm text-green-500 hover:text-green-400 transition-colors font-medium"
                           >
                             Reativar
@@ -308,7 +357,7 @@ export default function GerenciarClientes() {
         </div>
       </main>
 
-      {/* MODAL */}
+      {/* MODAL CADASTRO / EDIÇÃO */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setModalAberto(false)} />
@@ -378,6 +427,15 @@ export default function GerenciarClientes() {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        titulo={confirmModal.titulo}
+        mensagem={confirmModal.mensagem}
+        tipo={confirmModal.tipo}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
 
     </div>
   );

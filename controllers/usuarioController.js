@@ -191,4 +191,42 @@ export default class UsuarioController {
             return res.status(500).json({ erro: "Erro ao reativar o utilizador!" });
         }
     }
+
+    async alterarSenha(req, res) {
+        try {
+            let id = req.usuarioLogado.id; 
+            let { senhaAtual, novaSenha } = req.body;
+
+            if (!senhaAtual || !novaSenha) {
+                return res.status(400).json({ msg: "Informe a senha atual e a nova senha." });
+            }
+
+            const usuarioBanco = await this.#repository.buscarPorId(id);
+            if (!usuarioBanco) {
+                return res.status(404).json({ msg: "Usuário não encontrado." });
+            }
+
+            const crypto = await import('crypto');
+
+            const hashSenhaAtualDigitada = crypto.createHash('sha256').update(senhaAtual).digest('hex');
+            
+            if (hashSenhaAtualDigitada !== usuarioBanco.senha) {
+                return res.status(400).json({ msg: "A senha atual está incorreta!" });
+            }
+
+            const hashNovaSenha = crypto.createHash('sha256').update(novaSenha).digest('hex');
+
+            const resultado = await this.#repository.alterarSenha(id, hashNovaSenha);
+
+            if (resultado) {
+                return res.status(200).json({ msg: "Senha alterada com sucesso!" });
+            } else {
+                return res.status(400).json({ msg: "Não foi possível alterar a senha no banco de dados." });
+            }
+
+        } catch (exception) {
+            console.error("Erro ao alterar a senha:", exception);
+            return res.status(500).json({ erro: "Erro ao alterar a senha!" });
+        }
+    }
 }

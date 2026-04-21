@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; 
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function GerenciarPessoas() {
   const router = useRouter();
@@ -16,9 +17,21 @@ export default function GerenciarPessoas() {
   const [senhaAcesso, setSenhaAcesso] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [erro, setErro] = useState("");
+  
+  // Feedbacks Visuais
+  const [erro, setErro] = useState(""); 
+  const [erroPrincipal, setErroPrincipal] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [busca, setBusca] = useState("");
+
+  // ESTADO DO NOSSO NOVO MODAL DE CONFIRMAÇÃO
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    titulo: "",
+    mensagem: "",
+    tipo: "atencao" as "atencao" | "perigo",
+    onConfirm: () => {}
+  });
 
   const [id, setId] = useState("");
   const [nome, setNome] = useState("");
@@ -95,7 +108,7 @@ export default function GerenciarPessoas() {
 
   const abrirModalAcesso = (pessoa: any) => {
     if (!pessoa.email) {
-      alert("É necessário que a pessoa tenha um E-mail cadastrado para gerar o acesso.");
+      exibirErroPrincipal("É necessário que a pessoa tenha um E-mail cadastrado para gerar o acesso.");
       return;
     }
     setPessoaSelecionada(pessoa);
@@ -107,6 +120,11 @@ export default function GerenciarPessoas() {
   const exibirSucesso = (mensagem: string) => {
     setSucesso(mensagem);
     setTimeout(() => setSucesso(""), 4000);
+  };
+
+  const exibirErroPrincipal = (mensagem: string) => {
+    setErroPrincipal(mensagem);
+    setTimeout(() => setErroPrincipal(""), 4000);
   };
 
   const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,8 +200,18 @@ export default function GerenciarPessoas() {
     }
   };
 
-  const excluirPessoa = async (idExclusao: string) => {
-    if (!window.confirm("Atenção: Tem certeza que deseja inativar este registro?")) return;
+  const abrirModalInativar = (idExclusao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Inativar Registro?",
+      mensagem: "Atenção: Tem certeza que deseja inativar este registro do sistema?",
+      tipo: "perigo", // Vermelho
+      onConfirm: () => efetivarInativacao(idExclusao)
+    });
+  };
+
+  const efetivarInativacao = async (idExclusao: string) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${idExclusao}`, {
         method: "DELETE",
@@ -193,12 +221,15 @@ export default function GerenciarPessoas() {
         carregarPessoas();
         exibirSucesso("Registro inativado com sucesso!");
       } else {
-        alert("Não foi possível excluir o registro.");
+        exibirErroPrincipal("Não foi possível excluir o registro.");
       }
     } catch (error) {
       console.error("Erro ao excluir", error);
+      exibirErroPrincipal("Erro de conexão ao inativar.");
     }
   };
+
+  // ==========================================
 
   const gerarAcessoAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -288,12 +319,22 @@ export default function GerenciarPessoas() {
         </div>
       </header>
 
+      {/* FEEDBACKS VISUAIS */}
       {sucesso && (
         <div className="max-w-6xl mx-auto mb-6 bg-green-950/50 border border-green-900 text-green-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
           <span className="font-medium">{sucesso}</span>
+        </div>
+      )}
+
+      {erroPrincipal && (
+        <div className="max-w-6xl mx-auto mb-6 bg-red-950/50 border border-red-900 text-red-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span className="font-medium">{erroPrincipal}</span>
         </div>
       )}
 
@@ -386,12 +427,14 @@ export default function GerenciarPessoas() {
                         >
                           Editar
                         </button>
+
                         <button 
-                          onClick={() => excluirPessoa(pessoa.id)}
+                          onClick={() => abrirModalInativar(pessoa.id)}
                           className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium"
                         >
                           Inativar
                         </button>
+
                       </div>
                     </td>
                   </tr>
@@ -574,6 +617,15 @@ export default function GerenciarPessoas() {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        titulo={confirmModal.titulo}
+        mensagem={confirmModal.mensagem}
+        tipo={confirmModal.tipo}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
 
     </div>
   );

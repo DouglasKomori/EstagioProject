@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function GerenciarBloqueios() {
   const [bloqueios, setBloqueios] = useState<any[]>([]);
@@ -12,6 +13,14 @@ export default function GerenciarBloqueios() {
   
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    titulo: "",
+    mensagem: "",
+    tipo: "atencao" as "atencao" | "perigo",
+    onConfirm: () => {}
+  });
 
   // Campos do Formulário
   const [id, setId] = useState("");
@@ -131,8 +140,22 @@ export default function GerenciarBloqueios() {
     }
   };
 
-  const inativarBloqueio = async (idExclusao: string) => {
-    if (!window.confirm("Deseja cancelar este bloqueio? Os horários voltarão a ficar livres na agenda.")) return;
+  // ==========================================
+  // NOVAS FUNÇÕES USANDO O MODAL CUSTOMIZADO
+  // ==========================================
+
+  const abrirModalInativar = (idExclusao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Cancelar Bloqueio?",
+      mensagem: "Deseja cancelar este bloqueio? Os horários voltarão a ficar livres na agenda.",
+      tipo: "perigo", // Botão vermelho para ação destrutiva
+      onConfirm: () => efetivarInativacao(idExclusao)
+    });
+  };
+
+  const efetivarInativacao = async (idExclusao: string) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bloqueios/${idExclusao}`, {
         method: "DELETE", headers: { "Authorization": `Bearer ${obterToken()}` }
@@ -144,8 +167,18 @@ export default function GerenciarBloqueios() {
     } catch (error) { console.error(error); }
   };
 
-  const reativarBloqueio = async (idReativacao: string) => {
-    if (!window.confirm("Deseja reativar este bloqueio de agenda?")) return;
+  const abrirModalReativar = (idReativacao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Reativar Bloqueio?",
+      mensagem: "Deseja reativar este bloqueio de agenda?",
+      tipo: "atencao", // Botão dourado padrão
+      onConfirm: () => efetivarReativacao(idReativacao)
+    });
+  };
+
+  const efetivarReativacao = async (idReativacao: string) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bloqueios/${idReativacao}/reativar`, {
         method: "PUT", headers: { "Authorization": `Bearer ${obterToken()}` }
@@ -156,6 +189,8 @@ export default function GerenciarBloqueios() {
       }
     } catch (error) { console.error(error); }
   };
+
+  // ==========================================
 
   // Funções de formatação bonitas para a tela
   const formatarData = (dataStr: string) => new Date(dataStr).toLocaleDateString('pt-BR');
@@ -254,12 +289,14 @@ export default function GerenciarBloqueios() {
 
                 <div className="flex justify-end gap-3 pt-3 border-t border-zinc-800/50">
                   {b.ativo !== 0 ? (
-                    <button onClick={() => inativarBloqueio(b.id)} className="text-sm text-green-500 hover:text-green-400 transition-colors font-medium flex items-center gap-1">
+                    // Alterado para abrir o Modal Customizado
+                    <button onClick={() => abrirModalInativar(b.id)} className="text-sm text-green-500 hover:text-green-400 transition-colors font-medium flex items-center gap-1">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
                       Liberar Agenda
                     </button>
                   ) : (
-                    <button onClick={() => reativarBloqueio(b.id)} className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium flex items-center gap-1">
+                    // Alterado para abrir o Modal Customizado
+                    <button onClick={() => abrirModalReativar(b.id)} className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium flex items-center gap-1">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                       Reativar Bloqueio
                     </button>
@@ -362,6 +399,15 @@ export default function GerenciarBloqueios() {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        titulo={confirmModal.titulo}
+        mensagem={confirmModal.mensagem}
+        tipo={confirmModal.tipo}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
 
     </div>
   );

@@ -9,6 +9,10 @@ export default function GestaoCaixa() {
   const [historico, setHistorico] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Estados para feedbacks visuais
+  const [sucesso, setSucesso] = useState("");
+  const [erro, setErro] = useState("");
+
   // Estados para Modais
   const [modalAbrirAberto, setModalAbrirAberto] = useState(false);
   const [modalFecharAberto, setModalFecharAberto] = useState(false);
@@ -19,6 +23,16 @@ export default function GestaoCaixa() {
   useEffect(() => {
     carregarDadosCaixa();
   }, []);
+
+  const exibirSucesso = (mensagem: string) => {
+    setSucesso(mensagem);
+    setTimeout(() => setSucesso(""), 3000);
+  };
+
+  const exibirErro = (mensagem: string) => {
+    setErro(mensagem);
+    setTimeout(() => setErro(""), 4000);
+  };
 
   const carregarDadosCaixa = async () => {
     setLoading(true);
@@ -61,26 +75,32 @@ export default function GestaoCaixa() {
         setModalAbrirAberto(false);
         setSaldoInicial("");
         carregarDadosCaixa();
+        exibirSucesso("Caixa aberto com sucesso! Bom expediente.");
       } else {
         const err = await res.json();
-        alert(err.msg);
+        exibirErro(err.msg || "Erro ao abrir o caixa.");
       }
-    } catch (e) { alert("Erro de conexão"); }
+    } catch (e) { 
+      exibirErro("Erro de conexão ao tentar abrir o caixa."); 
+    }
   };
 
   const confirmarFechamento = async () => {
-    if (!window.confirm("Deseja encerrar o expediente e fechar o caixa?")) return;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/caixas/fechar`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (res.ok) {
-        alert("Caixa fechado com sucesso!");
         setModalFecharAberto(false);
         carregarDadosCaixa();
+        exibirSucesso("Caixa fechado com sucesso!");
+      } else {
+        exibirErro("Não foi possível fechar o caixa.");
       }
-    } catch (e) { alert("Erro ao fechar"); }
+    } catch (e) { 
+      exibirErro("Erro de conexão ao tentar fechar o caixa."); 
+    }
   };
 
   if (loading) return (
@@ -113,6 +133,25 @@ export default function GestaoCaixa() {
           )}
         </div>
       </header>
+
+      {/* FEEDBACKS VISUAIS */}
+      {sucesso && (
+        <div className="max-w-5xl mx-auto mb-6 bg-green-950/50 border border-green-900 text-green-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          <span className="font-medium">{sucesso}</span>
+        </div>
+      )}
+
+      {erro && (
+        <div className="max-w-5xl mx-auto mb-6 bg-red-950/50 border border-red-900 text-red-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span className="font-medium">{erro}</span>
+        </div>
+      )}
 
       <main className="max-w-5xl mx-auto">
         {/* PARTE SUPERIOR: CAIXA ATUAL */}

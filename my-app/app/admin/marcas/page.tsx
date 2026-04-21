@@ -1,23 +1,33 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function GerenciarMarcas() {
   const [marcas, setMarcas] = useState<any[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [erro, setErro] = useState("");
+  // Feedbacks Visuais
+  const [erro, setErro] = useState(""); 
+  const [erroPrincipal, setErroPrincipal] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [busca, setBusca] = useState("");
   
-  // NOVO: Estado para controlar o filtro de inativos
+  // ESTADO DO NOSSO NOVO MODAL DE CONFIRMAÇÃO
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    titulo: "",
+    mensagem: "",
+    tipo: "atencao" as "atencao" | "perigo",
+    onConfirm: () => {}
+  });
+
   const [mostrarInativos, setMostrarInativos] = useState(false);
 
   const [id, setId] = useState("");
   const [nome, setNome] = useState("");
 
-  // NOVO: Atualizamos o useEffect para recarregar sempre que o filtro mudar
   useEffect(() => {
     carregarMarcas();
   }, [mostrarInativos]);
@@ -26,7 +36,6 @@ export default function GerenciarMarcas() {
     return localStorage.getItem("token") || "";
   };
 
-  // ATUALIZADO: Agora envia o parâmetro ?inativos=true se o checkbox estiver marcado
   const carregarMarcas = async () => {
     try {
       const url = `${process.env.NEXT_PUBLIC_API_URL}/marcas${mostrarInativos ? '?inativos=true' : ''}`;
@@ -37,7 +46,6 @@ export default function GerenciarMarcas() {
         const data = await response.json();
         setMarcas(data);
       } else {
-        // Se a API retornar 404 (Nenhuma marca), limpamos a lista
         setMarcas([]);
       }
     } catch (error) {
@@ -62,6 +70,11 @@ export default function GerenciarMarcas() {
   const exibirSucesso = (mensagem: string) => {
     setSucesso(mensagem);
     setTimeout(() => setSucesso(""), 3000);
+  };
+
+  const exibirErroPrincipal = (mensagem: string) => {
+    setErroPrincipal(mensagem);
+    setTimeout(() => setErroPrincipal(""), 4000);
   };
 
   const salvarMarca = async (e: React.FormEvent) => {
@@ -98,9 +111,18 @@ export default function GerenciarMarcas() {
     }
   };
 
-  const excluirMarca = async (idExclusao: string) => {
-    if (!window.confirm("Atenção: Tem certeza que deseja inativar esta marca?")) return;
+  const abrirModalInativar = (idExclusao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Inativar Marca?",
+      mensagem: "Atenção: Tem certeza que deseja inativar esta marca? Os produtos atrelados a ela continuarão existindo, mas a marca não aparecerá em novos cadastros.",
+      tipo: "perigo", // Vermelho
+      onConfirm: () => efetivarInativacao(idExclusao)
+    });
+  };
 
+  const efetivarInativacao = async (idExclusao: string) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/marcas/${idExclusao}`, {
         method: "DELETE",
@@ -111,16 +133,26 @@ export default function GerenciarMarcas() {
         carregarMarcas();
         exibirSucesso("Marca inativada com sucesso!");
       } else {
-        alert("Não foi possível excluir a marca.");
+        exibirErroPrincipal("Não foi possível inativar a marca.");
       }
     } catch (error) {
       console.error("Erro ao excluir", error);
+      exibirErroPrincipal("Erro de conexão ao tentar inativar.");
     }
   };
 
-  const reativarMarca = async (idReativacao: string) => {
-    if (!window.confirm("Deseja reativar esta marca? Ela voltará a aparecer no sistema.")) return;
+  const abrirModalReativar = (idReativacao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Reativar Marca?",
+      mensagem: "Deseja reativar esta marca? Ela voltará a aparecer nas opções de cadastro do sistema.",
+      tipo: "atencao", // Dourado
+      onConfirm: () => efetivarReativacao(idReativacao)
+    });
+  };
 
+  const efetivarReativacao = async (idReativacao: string) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/marcas/${idReativacao}/reativar`, {
         method: "PUT",
@@ -131,12 +163,15 @@ export default function GerenciarMarcas() {
         carregarMarcas();
         exibirSucesso("Marca reativada com sucesso!");
       } else {
-        alert("Não foi possível reativar a marca.");
+        exibirErroPrincipal("Não foi possível reativar a marca.");
       }
     } catch (error) {
       console.error("Erro ao reativar", error);
+      exibirErroPrincipal("Erro de conexão ao tentar reativar.");
     }
   };
+
+  // ==========================================
 
   const marcasFiltradas = marcas.filter((m) => 
     m.nome.toLowerCase().includes(busca.toLowerCase())
@@ -163,12 +198,22 @@ export default function GerenciarMarcas() {
         </div>
       </header>
 
+      {/* FEEDBACKS VISUAIS NA TELA PRINCIPAL */}
       {sucesso && (
         <div className="max-w-6xl mx-auto mb-6 bg-green-950/50 border border-green-900 text-green-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
           <span className="font-medium">{sucesso}</span>
+        </div>
+      )}
+
+      {erroPrincipal && (
+        <div className="max-w-6xl mx-auto mb-6 bg-red-950/50 border border-red-900 text-red-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span className="font-medium">{erroPrincipal}</span>
         </div>
       )}
 
@@ -253,17 +298,17 @@ export default function GerenciarMarcas() {
                           Editar
                         </button>
                         
-                        {/* Lógica Condicional: Se ativo=1 mostra inativar, se ativo=0 mostra reativar */}
+                        {/* Lógica Condicional do Modal */}
                         {marca.ativo !== 0 ? (
                           <button 
-                            onClick={() => excluirMarca(marca.id)}
+                            onClick={() => abrirModalInativar(marca.id)}
                             className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium"
                           >
                             Inativar
                           </button>
                         ) : (
                           <button 
-                            onClick={() => reativarMarca(marca.id)}
+                            onClick={() => abrirModalReativar(marca.id)}
                             className="text-sm text-green-500 hover:text-green-400 transition-colors font-medium"
                           >
                             Reativar
@@ -320,6 +365,15 @@ export default function GerenciarMarcas() {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        titulo={confirmModal.titulo}
+        mensagem={confirmModal.mensagem}
+        tipo={confirmModal.tipo}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
 
     </div>
   );

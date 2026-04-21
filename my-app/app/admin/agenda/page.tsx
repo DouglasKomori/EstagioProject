@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function AgendaAdmin() {
   const [dataSelecionada, setDataSelecionada] = useState(new Date());
@@ -21,13 +22,21 @@ export default function AgendaAdmin() {
   const [horariosOcupadosArray, setHorariosOcupadosArray] = useState<string[]>([]); // Guarda os blocos bloqueados
   // ============================================
 
-  // Estados do Modal
+  // Estados do Modal de Novo Agendamento
   const [modalAberto, setModalAberto] = useState(false);
   const [horaSelecionada, setHoraSelecionada] = useState("");
   const [profissionalSelecionado, setProfissionalSelecionado] = useState("");
   const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([]);
   const [observacao, setObservacao] = useState("");
   const [erroModal, setErroModal] = useState("");
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    titulo: "",
+    mensagem: "",
+    tipo: "atencao" as "atencao" | "perigo",
+    onConfirm: () => {}
+  });
 
   const [clienteSelecionado, setClienteSelecionado] = useState<number | "">("");
   const [buscaCliente, setBuscaCliente] = useState("");
@@ -91,7 +100,6 @@ export default function AgendaAdmin() {
       const dia = String(dataSelecionada.getDate()).padStart(2, '0');
       const dataFormatada = `${ano}-${mes}-${dia}`;
 
-      // 1. Busca Agendamentos
       const resAgendamentos = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos?data=${dataFormatada}`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
@@ -102,7 +110,6 @@ export default function AgendaAdmin() {
       }
       setAgendamentos(agendamentosDia);
 
-      // 2. Busca Escala (Disponibilidade)
       const resDisp = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/disponibilidade?profissionalId=${profissionalFiltro}`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
@@ -112,7 +119,6 @@ export default function AgendaAdmin() {
         gerarHorariosDinamicos(dataSelecionada, disponibilidadesProf);
       }
 
-      // 3. Busca Horários Ocupados (Para colorir os blocos "comidos" pelo tempo)
       const resOcupados = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/ocupados?data=${dataFormatada}&profissionalId=${profissionalFiltro}`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
@@ -183,8 +189,22 @@ export default function AgendaAdmin() {
     return dataTemp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const concluirAgendamento = async (id: number) => {
-    if (!window.confirm("Deseja marcar este agendamento como CONCLUÍDO?")) return;
+  // ==========================================
+  // NOVAS FUNÇÕES USANDO O MODAL CUSTOMIZADO
+  // ==========================================
+  
+  const abrirModalConcluir = (id: number) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Concluir Agendamento?",
+      mensagem: "Deseja marcar este agendamento como CONCLUÍDO?",
+      tipo: "atencao",
+      onConfirm: () => efetivarConclusao(id)
+    });
+  };
+
+  const efetivarConclusao = async (id: number) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/${id}/status`, {
         method: "PUT",
@@ -196,8 +216,18 @@ export default function AgendaAdmin() {
     } catch (error) { console.error(error); }
   };
 
-  const cancelarAgendamento = async (id: number) => {
-    if (!window.confirm("Atenção: Deseja realmente CANCELAR este agendamento?")) return;
+  const abrirModalCancelar = (id: number) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Cancelar Agendamento?",
+      mensagem: "Atenção: Deseja realmente CANCELAR este agendamento?",
+      tipo: "perigo", // Deixa o botão vermelho!
+      onConfirm: () => efetivarCancelamento(id)
+    });
+  };
+
+  const efetivarCancelamento = async (id: number) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/${id}/cancelar`, {
         method: "PUT", headers: { "Authorization": `Bearer ${obterToken()}` }
@@ -206,6 +236,7 @@ export default function AgendaAdmin() {
       else alert("Erro ao cancelar.");
     } catch (error) { console.error(error); }
   };
+  // ==========================================
 
   const abrirModal = (hora: string = "") => {
     if (!profissionalFiltro) {
@@ -426,7 +457,6 @@ export default function AgendaAdmin() {
 
                   const passouDaHora = !agendamento && isHoraPassada(hora); 
                   
-                  // Verifica se o horário faz parte de um "bloco ocupado" (no meio de um atendimento)
                   const isEmAtendimento = !agendamento && horariosOcupadosArray.includes(hora) && !passouDaHora;
 
                   let bgClass = "bg-zinc-950 border-zinc-800 hover:border-[#E4B77D]/50";
@@ -437,7 +467,6 @@ export default function AgendaAdmin() {
                     else if (agendamento.status === "CONCLUIDO") { bgClass = "bg-green-950/30 border-green-900/50 opacity-60"; textClass = "text-green-400"; } 
                     else if (agendamento.status === "CANCELADO") { bgClass = "bg-red-950/20 border-red-900/30 opacity-50"; textClass = "text-red-400"; }
                   } else if (isEmAtendimento) {
-                    // Cadeira já está ocupada por um serviço longo (Admin AVISO VISUAL)
                     bgClass = "bg-yellow-950/10 border-yellow-900/30 hover:border-[#E4B77D]/50"; 
                     textClass = "text-yellow-600";
                   } else if (passouDaHora) {
@@ -475,16 +504,17 @@ export default function AgendaAdmin() {
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           {agendamento && agendamento.status === 'AGENDADO' && (
                             <>
-                              <button onClick={() => cancelarAgendamento(agendamento.id)} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-md border border-zinc-800" title="Cancelar Agendamento">
+                              {/* CHAMANDO O MODAL AQUI */}
+                              <button onClick={() => abrirModalCancelar(agendamento.id)} className="p-2 text-zinc-400 hover:text-red-400 bg-zinc-900 rounded-md border border-zinc-800" title="Cancelar Agendamento">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                               </button>
-                              <button onClick={() => concluirAgendamento(agendamento.id)} className="p-2 text-zinc-400 hover:text-green-400 bg-zinc-900 rounded-md border border-zinc-800" title="Marcar como Concluído">
+                              {/* CHAMANDO O MODAL AQUI */}
+                              <button onClick={() => abrirModalConcluir(agendamento.id)} className="p-2 text-zinc-400 hover:text-green-400 bg-zinc-900 rounded-md border border-zinc-800" title="Marcar como Concluído">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                               </button>
                             </>
                           )}
                           
-                          {/* Botão Agendar (Encaixe livre pro Admin!) */}
                           {isDisponivelParaAgendar && !passouDaHora && (
                               <button onClick={() => abrirModal(hora)} className="px-4 py-2 text-sm font-bold bg-zinc-800 text-[#E4B77D] rounded-md hover:bg-zinc-700 transition-colors border border-zinc-700">
                                 Agendar
@@ -638,6 +668,16 @@ export default function AgendaAdmin() {
           </div>
         </div>
       )}
+
+      {/* RENDERIZANDO O MODAL DE CONFIRMAÇÃO AQUI NO FINAL! */}
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        titulo={confirmModal.titulo}
+        mensagem={confirmModal.mensagem}
+        tipo={confirmModal.tipo}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
 
     </div>
   );

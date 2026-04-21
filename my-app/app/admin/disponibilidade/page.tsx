@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+// IMPORTAÇÃO DO NOSSO NOVO COMPONENTE
+import ConfirmModal from "../../components/ConfirmModal";
 
 const DIAS_SEMANA = [
   "Domingo", 
@@ -19,7 +21,17 @@ export default function GerenciarDisponibilidade() {
   
   const [loading, setLoading] = useState(false);
   const [sucesso, setSucesso] = useState("");
-  const [erro, setErro] = useState("");
+  const [erro, setErro] = useState(""); // Erro do modal de adicionar
+  const [erroPrincipal, setErroPrincipal] = useState(""); // Erro da tela principal
+
+  // ESTADO DO NOSSO NOVO MODAL DE CONFIRMAÇÃO
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    titulo: "",
+    mensagem: "",
+    tipo: "atencao" as "atencao" | "perigo",
+    onConfirm: () => {}
+  });
 
   // Estados do Modal
   const [modalAberto, setModalAberto] = useState(false);
@@ -66,6 +78,11 @@ export default function GerenciarDisponibilidade() {
     setTimeout(() => setSucesso(""), 3000);
   };
 
+  const exibirErroPrincipal = (mensagem: string) => {
+    setErroPrincipal(mensagem);
+    setTimeout(() => setErroPrincipal(""), 4000);
+  };
+
   const abrirModal = (diaSemana: number) => {
     setDiaSelecionado(diaSemana);
     setHoraInicio("09:00");
@@ -110,8 +127,22 @@ export default function GerenciarDisponibilidade() {
     }
   };
 
-  const excluirTurno = async (idExclusao: string) => {
-    if (!window.confirm("Deseja remover este horário de trabalho?")) return;
+  // ==========================================
+  // NOVAS FUNÇÕES USANDO O MODAL CUSTOMIZADO
+  // ==========================================
+
+  const abrirModalExcluirTurno = (idExclusao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Remover Horário?",
+      mensagem: "Deseja remover este horário de trabalho da escala do barbeiro?",
+      tipo: "perigo", // Vermelho
+      onConfirm: () => efetivarExclusaoTurno(idExclusao)
+    });
+  };
+
+  const efetivarExclusaoTurno = async (idExclusao: string) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/disponibilidade/${idExclusao}`, {
         method: "DELETE", headers: { "Authorization": `Bearer ${obterToken()}` }
@@ -120,12 +151,15 @@ export default function GerenciarDisponibilidade() {
         carregarDisponibilidades(profissionalSelecionado);
         exibirSucesso("Horário removido com sucesso!");
       } else {
-        alert("Não foi possível remover o horário.");
+        exibirErroPrincipal("Não foi possível remover o horário.");
       }
-    } catch (error) { console.error(error); }
+    } catch (error) { 
+      console.error(error); 
+      exibirErroPrincipal("Erro de conexão ao remover.");
+    }
   };
 
-  // Formata o tempo de HH:MM:SS para HH:MM para ficar mais bonito na tela
+
   const formatarHora = (hora: string) => hora ? hora.substring(0, 5) : "";
 
   return (
@@ -146,12 +180,22 @@ export default function GerenciarDisponibilidade() {
         </Link>
       </header>
 
+      {/* FEEDBACKS VISUAIS */}
       {sucesso && (
         <div className="max-w-6xl mx-auto mb-6 bg-green-950/50 border border-green-900 text-green-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
           <span className="font-medium">{sucesso}</span>
+        </div>
+      )}
+
+      {erroPrincipal && (
+        <div className="max-w-6xl mx-auto mb-6 bg-red-950/50 border border-red-900 text-red-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span className="font-medium">{erroPrincipal}</span>
         </div>
       )}
 
@@ -198,8 +242,9 @@ export default function GerenciarDisponibilidade() {
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-[#E4B77D]"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                           <span className="font-mono font-bold tracking-wider">{formatarHora(turno.horaInicio)} às {formatarHora(turno.horaFim)}</span>
                         </div>
+                        {/* BOTÃO ALTERADO PARA CHAMAR O MODAL */}
                         <button 
-                          onClick={() => excluirTurno(turno.id)} 
+                          onClick={() => abrirModalExcluirTurno(turno.id)} 
                           className="text-zinc-600 hover:text-red-500 hover:bg-red-500/10 p-1.5 rounded-md transition-colors"
                           title="Remover Horário"
                         >
@@ -276,6 +321,15 @@ export default function GerenciarDisponibilidade() {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        titulo={confirmModal.titulo}
+        mensagem={confirmModal.mensagem}
+        tipo={confirmModal.tipo}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
 
     </div>
   );

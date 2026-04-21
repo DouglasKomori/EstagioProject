@@ -69,6 +69,13 @@ export default class UsuarioRepository {
         return result;
     }
 
+    async alterarSenha(id, novaSenhaHash) {
+        const sql = "update cliente set senha = ? where id = ?";
+        const params = [novaSenhaHash, parseInt(id)];
+        const result = await this.#banco.ExecutaComandoNonQuery(sql, params);
+        return result;
+    }
+
     async excluir(id) {
         const sql = "update cliente set ativo = 0 where id = ?";
         const params = [parseInt(id)]; 

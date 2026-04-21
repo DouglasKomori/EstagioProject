@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function GerenciarComandas() {
   // === CONTROLE DE ABAS ===
@@ -14,6 +15,22 @@ export default function GerenciarComandas() {
   const [profissionais, setProfissionais] = useState<any[]>([]);
   const [servicos, setServicos] = useState<any[]>([]);
   const [produtos, setProdutos] = useState<any[]>([]);
+
+  // Feedbacks Visuais da Tela Principal
+  const [sucesso, setSucesso] = useState("");
+  const [erroPrincipal, setErroPrincipal] = useState("");
+
+  // Feedbacks Visuais DENTRO do Modal de Detalhes
+  const [sucessoDetalhes, setSucessoDetalhes] = useState("");
+  const [erroDetalhes, setErroDetalhes] = useState("");
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    titulo: "",
+    mensagem: "",
+    tipo: "atencao" as "atencao" | "perigo",
+    onConfirm: () => {}
+  });
 
   // Estados Relatório
   const [relatorio, setRelatorio] = useState<any[]>([]);
@@ -62,6 +79,28 @@ export default function GerenciarComandas() {
     if (abaAtual === "ABERTAS") carregarComandasAbertas();
     else if (abaAtual === "RELATORIO") carregarRelatorio();
   }, [abaAtual, filtroPeriodo, filtroProfissional]);
+
+  // === FUNÇÕES DE TEMPORIZADOR DOS AVISOS ===
+  const exibirSucesso = (mensagem: string) => {
+    setSucesso(mensagem);
+    setTimeout(() => setSucesso(""), 4000);
+  };
+
+  const exibirErroPrincipal = (mensagem: string) => {
+    setErroPrincipal(mensagem);
+    setTimeout(() => setErroPrincipal(""), 4000);
+  };
+
+  const exibirSucessoDetalhes = (mensagem: string) => {
+    setSucessoDetalhes(mensagem);
+    setTimeout(() => setSucessoDetalhes(""), 3000);
+  };
+
+  const exibirErroDetalhes = (mensagem: string) => {
+    setErroDetalhes(mensagem);
+    setTimeout(() => setErroDetalhes(""), 4000);
+  };
+  // ===========================================
 
   const carregarDadosBase = async () => {
     const headers = { "Authorization": `Bearer ${obterToken()}` };
@@ -115,7 +154,7 @@ export default function GerenciarComandas() {
     finally { setLoading(false); }
   };
 
-  // --- LÓGICA DA COMANDA (Abrir, Add, Fechar) continua igual... ---
+  // --- LÓGICA DA COMANDA ---
   const abrirNovaComanda = async (e: React.FormEvent) => {
     e.preventDefault();
     setErroNova("");
@@ -131,6 +170,7 @@ export default function GerenciarComandas() {
       if (res.ok) {
         setModalNovaAberto(false); setNumeroComanda(""); setClienteId(""); setBuscaCliente(""); setDropdownClienteAberto(false);
         carregarComandasAbertas();
+        exibirSucesso("Comanda aberta com sucesso!");
       } else {
         const data = await res.json(); setErroNova(data.msg);
       }
@@ -171,39 +211,100 @@ export default function GerenciarComandas() {
         method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${obterToken()}` },
         body: JSON.stringify(payload)
       });
-      if (res.ok) abrirDetalhes(comandaAtual.id);
-      else alert((await res.json()).msg);
-    } catch (error) { alert("Erro."); }
+      if (res.ok) {
+        abrirDetalhes(comandaAtual.id);
+        exibirSucessoDetalhes("Item lançado com sucesso!");
+      }
+      else exibirErroDetalhes((await res.json()).msg);
+    } catch (error) { exibirErroDetalhes("Erro ao adicionar item."); }
     finally { setLoading(false); }
   };
 
-  const removerItemDaComanda = async (tipo: "SERVICO" | "PRODUTO", idInterno: number) => {
-    if(!window.confirm("Remover este item?")) return;
+  // ==========================================
+  // NOVAS FUNÇÕES USANDO O MODAL CUSTOMIZADO
+  // ==========================================
+
+  // 1. Remover Item da Comanda
+  const abrirModalRemoverItem = (tipo: "SERVICO" | "PRODUTO", idInterno: number) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Remover Item?",
+      mensagem: "Tem certeza que deseja remover este item da ficha?",
+      tipo: "perigo", // Vermelho
+      onConfirm: () => efetivarRemocaoItem(tipo, idInterno)
+    });
+  };
+
+  const efetivarRemocaoItem = async (tipo: "SERVICO" | "PRODUTO", idInterno: number) => {
+    setConfirmModal({ ...confirmModal, isOpen: false });
     setLoading(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/remover-item/${tipo}/${idInterno}`, { method: "DELETE", headers: { "Authorization": `Bearer ${obterToken()}` } });
-      if (res.ok) abrirDetalhes(comandaAtual.id);
-    } catch (error) { alert("Erro."); }
+      if (res.ok) {
+        abrirDetalhes(comandaAtual.id);
+        exibirSucessoDetalhes("Item removido!");
+      } else {
+        const data = await res.json();
+        exibirErroDetalhes(data.msg || "Erro ao remover item.");
+      }
+    } catch (error) { exibirErroDetalhes("Erro de conexão."); }
     finally { setLoading(false); }
   };
 
-  const fecharConta = async () => {
-    if (!window.confirm("Confirmar pagamento?")) return;
+  // 2. Fechar / Pagar a Conta
+  const abrirModalFecharConta = () => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Confirmar Pagamento?",
+      mensagem: `Deseja fechar esta conta e registrar o faturamento de R$ ${calcularTotal().toFixed(2)}?`,
+      tipo: "atencao", // Dourado
+      onConfirm: () => efetivarFechamento()
+    });
+  };
+
+  const efetivarFechamento = async () => {
+    setConfirmModal({ ...confirmModal, isOpen: false });
     setLoading(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/${comandaAtual.id}/finalizar`, { method: "PUT", headers: { "Authorization": `Bearer ${obterToken()}` } });
-      if (res.ok) { alert("Pago!"); setModalDetalhesAberto(false); carregarComandasAbertas(); }
-    } catch (error) { alert("Erro."); }
+      if (res.ok) { 
+        exibirSucesso("Comanda fechada e paga com sucesso!"); 
+        setModalDetalhesAberto(false); 
+        carregarComandasAbertas(); 
+      } else {
+        // Captura o erro real do Back-end (Ex: "Abra o caixa do dia...")
+        const data = await res.json();
+        exibirErroDetalhes(data.msg || "Não foi possível fechar a conta.");
+      }
+    } catch (error) { exibirErroDetalhes("Erro de conexão ao fechar conta."); }
     finally { setLoading(false); }
   };
 
-  const cancelarComanda = async () => {
-    if (!window.confirm("CANCELAR a Ficha?")) return;
+  // 3. Cancelar a Comanda
+  const abrirModalCancelarComanda = () => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Cancelar Ficha?",
+      mensagem: "Atenção: Tem certeza que deseja cancelar esta ficha? Todos os itens lançados serão perdidos.",
+      tipo: "perigo", // Vermelho
+      onConfirm: () => efetivarCancelamentoComanda()
+    });
+  };
+
+  const efetivarCancelamentoComanda = async () => {
+    setConfirmModal({ ...confirmModal, isOpen: false });
     setLoading(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/${comandaAtual.id}/cancelar`, { method: "PUT", headers: { "Authorization": `Bearer ${obterToken()}` } });
-      if (res.ok) { alert("Cancelada."); setModalDetalhesAberto(false); carregarComandasAbertas(); }
-    } catch (error) { alert("Erro."); }
+      if (res.ok) { 
+        exibirSucesso("Comanda cancelada com sucesso."); 
+        setModalDetalhesAberto(false); 
+        carregarComandasAbertas(); 
+      } else {
+        const data = await res.json();
+        exibirErroDetalhes(data.msg || "Erro ao cancelar comanda.");
+      }
+    } catch (error) { exibirErroDetalhes("Erro de conexão ao cancelar."); }
     finally { setLoading(false); }
   };
 
@@ -239,8 +340,22 @@ export default function GerenciarComandas() {
         </div>
       </header>
 
+      {/* FEEDBACKS DA TELA PRINCIPAL */}
+      {sucesso && (
+        <div className="max-w-6xl mx-auto mt-4 mb-4 bg-green-950/50 border border-green-900 text-green-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          <span className="font-medium">{sucesso}</span>
+        </div>
+      )}
+      {erroPrincipal && (
+        <div className="max-w-6xl mx-auto mt-4 mb-4 bg-red-950/50 border border-red-900 text-red-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          <span className="font-medium">{erroPrincipal}</span>
+        </div>
+      )}
+
       {/* ABAS */}
-      <div className="max-w-6xl mx-auto flex gap-4 mb-8">
+      <div className="max-w-6xl mx-auto flex gap-4 my-8">
         <button 
           onClick={() => setAbaAtual("ABERTAS")}
           className={`pb-2 px-2 text-sm font-bold tracking-wide transition-colors ${abaAtual === "ABERTAS" ? "text-[#E4B77D] border-b-2 border-[#E4B77D]" : "text-zinc-500 hover:text-zinc-300"}`}
@@ -332,8 +447,6 @@ export default function GerenciarComandas() {
         </main>
       )}
 
-      {/* MODAL 1 E MODAL 2 CONTINUAM AQUI EMBAIXO EXATAMENTE IGUAIS... */}
-      
       {/* MODAL 1: ABRIR NOVA COMANDA */}
       {modalNovaAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -383,6 +496,10 @@ export default function GerenciarComandas() {
                 <h2 className="text-xl font-bold text-white">Adicionar à Ficha <span className="text-[#E4B77D]">{comandaAtual.numero_comanda}</span></h2>
                 <button onClick={() => setModalDetalhesAberto(false)} className="text-zinc-500 hover:text-white md:hidden">✕</button>
               </div>
+
+              {/* Feedbacks do Modal de Detalhes */}
+              {sucessoDetalhes && <div className="mb-4 bg-green-950/50 border border-green-900 text-green-400 p-3 rounded-lg text-sm">{sucessoDetalhes}</div>}
+              {erroDetalhes && <div className="mb-4 bg-red-950/50 border border-red-900 text-red-400 p-3 rounded-lg text-sm">{erroDetalhes}</div>}
 
               <div className="flex bg-zinc-950 rounded-lg p-1 mb-6">
                 <button onClick={() => {setTipoItem("SERVICO"); setItemId(""); setValorCobrado("");}} className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${tipoItem === "SERVICO" ? "bg-zinc-800 text-[#E4B77D]" : "text-zinc-500 hover:text-zinc-300"}`}>Serviço Prestado</button>
@@ -434,13 +551,19 @@ export default function GerenciarComandas() {
                     {comandaAtual.servicos.map((s: any) => (
                       <div key={`s-${s.id}`} className="flex justify-between items-center border-b border-zinc-800/50 pb-2 group">
                         <div><p className="text-zinc-200 text-sm font-medium">{s.servicoNome}</p><p className="text-zinc-500 text-xs">Por: {s.profissionalNome}</p></div>
-                        <div className="flex items-center gap-3"><span className="text-zinc-400 font-mono text-sm">R$ {Number(s.valorCobrado).toFixed(2)}</span><button onClick={() => removerItemDaComanda("SERVICO", s.id)} className="text-zinc-700 hover:text-red-500 transition-colors p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-zinc-400 font-mono text-sm">R$ {Number(s.valorCobrado).toFixed(2)}</span>
+                          <button onClick={() => abrirModalRemoverItem("SERVICO", s.id)} className="text-zinc-700 hover:text-red-500 transition-colors p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                        </div>
                       </div>
                     ))}
                     {comandaAtual.produtos.map((p: any) => (
                       <div key={`p-${p.id}`} className="flex justify-between items-center border-b border-zinc-800/50 pb-2 group">
                         <div><p className="text-zinc-200 text-sm font-medium">{p.quantidade}x {p.produtoNome}</p></div>
-                        <div className="flex items-center gap-3"><span className="text-zinc-400 font-mono text-sm">R$ {(Number(p.valorCobrado) * Number(p.quantidade)).toFixed(2)}</span><button onClick={() => removerItemDaComanda("PRODUTO", p.id)} className="text-zinc-700 hover:text-red-500 transition-colors p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-zinc-400 font-mono text-sm">R$ {(Number(p.valorCobrado) * Number(p.quantidade)).toFixed(2)}</span>
+                          <button onClick={() => abrirModalRemoverItem("PRODUTO", p.id)} className="text-zinc-700 hover:text-red-500 transition-colors p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -449,14 +572,26 @@ export default function GerenciarComandas() {
               <div className="p-6 bg-zinc-900 border-t border-zinc-800 shrink-0">
                 <div className="flex justify-between items-end mb-4"><span className="font-bold uppercase tracking-widest text-zinc-500 text-sm">Total Geral</span><span className="text-3xl font-black text-[#E4B77D]">R$ {calcularTotal().toFixed(2)}</span></div>
                 <div className="flex flex-col gap-2">
-                  <button onClick={fecharConta} disabled={loading || calcularTotal() === 0} className="w-full py-4 bg-[#E4B77D] text-black font-extrabold rounded-lg hover:bg-[#cfa56d] transition-colors shadow-lg disabled:opacity-50">Confirmar Pagamento</button>
-                  <button onClick={cancelarComanda} disabled={loading} className="w-full py-2 bg-transparent text-red-500 border border-red-900/30 font-bold rounded-lg hover:bg-red-950/20 transition-colors">Cancelar Ficha</button>
+                  <button onClick={abrirModalFecharConta} disabled={loading || calcularTotal() === 0} className="w-full py-4 bg-[#E4B77D] text-black font-extrabold rounded-lg hover:bg-[#cfa56d] transition-colors shadow-lg disabled:opacity-50">Confirmar Pagamento</button>
+                  <button onClick={abrirModalCancelarComanda} disabled={loading} className="w-full py-2 bg-transparent text-red-500 border border-red-900/30 font-bold rounded-lg hover:bg-red-950/20 transition-colors">Cancelar Ficha</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      <div className="relative z-[999]">
+        <ConfirmModal 
+          isOpen={confirmModal.isOpen}
+          titulo={confirmModal.titulo}
+          mensagem={confirmModal.mensagem}
+          tipo={confirmModal.tipo}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        />
+      </div>
+
     </div>
   );
 }

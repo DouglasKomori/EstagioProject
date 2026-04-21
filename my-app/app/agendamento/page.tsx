@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ConfirmModal from "../components/ConfirmModal"; // Ajuste os ../ se necessário
 
 export default function AgendamentoCliente() {
   const router = useRouter();
@@ -14,7 +15,20 @@ export default function AgendamentoCliente() {
   const [usuarioNome, setUsuarioNome] = useState("");
   const [horariosOcupados, setHorariosOcupados] = useState<string[]>([]);
 
-  // === NOVO: LÓGICA DINÂMICA ===
+  // === FEEDBACKS VISUAIS DA TELA PRINCIPAL ===
+  const [sucesso, setSucesso] = useState("");
+  const [erroPrincipal, setErroPrincipal] = useState("");
+
+  // === ESTADO DO NOSSO NOVO MODAL DE CONFIRMAÇÃO ===
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    titulo: "",
+    mensagem: "",
+    tipo: "atencao" as "atencao" | "perigo",
+    onConfirm: () => {}
+  });
+
+  // === LÓGICA DINÂMICA ===
   const [disponibilidades, setDisponibilidades] = useState<any[]>([]);
   const [horariosDinamicos, setHorariosDinamicos] = useState<string[]>([]);
   // ==============================
@@ -50,6 +64,16 @@ export default function AgendamentoCliente() {
       setHorariosDinamicos([]);
     }
   }, [dataSelecionada, profissionalSelecionado]);
+
+  const exibirSucesso = (mensagem: string) => {
+    setSucesso(mensagem);
+    setTimeout(() => setSucesso(""), 5000);
+  };
+
+  const exibirErroPrincipal = (mensagem: string) => {
+    setErroPrincipal(mensagem);
+    setTimeout(() => setErroPrincipal(""), 5000);
+  };
 
   const carregarDadosIniciais = async () => {
     setLoading(true);
@@ -122,7 +146,6 @@ export default function AgendamentoCliente() {
     setHoraSelecionada(""); // Reseta a seleção quando troca de dia
   };
 
-
   const verificarPodeCancelar = (dataHoraISO: string) => {
     const agora = new Date();
     const dataAgendamento = new Date(dataHoraISO);
@@ -130,8 +153,19 @@ export default function AgendamentoCliente() {
     return diferencaMinutos >= 120; 
   };
 
-  const cancelarAgendamento = async (id: number) => {
-    if (!window.confirm("Deseja realmente CANCELAR este agendamento?")) return;
+  const abrirModalCancelar = (id: number) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Cancelar Agendamento?",
+      mensagem: "Deseja realmente CANCELAR este agendamento?",
+      tipo: "perigo", // Vermelho
+      onConfirm: () => efetivarCancelamento(id)
+    });
+  };
+
+  const efetivarCancelamento = async (id: number) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
+    setLoading(true);
     
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/${id}/cancelar`, {
@@ -141,14 +175,19 @@ export default function AgendamentoCliente() {
       const data = await response.json();
       
       if (response.ok) {
-        alert("Agendamento cancelado com sucesso!");
+        exibirSucesso("Agendamento cancelado com sucesso!");
         carregarDadosIniciais(); 
         if (profissionalSelecionado) buscarEscalaEHorariosOcupados(); // Atualiza a grade se estiver aberta
       } else {
-        alert(data.msg || "Erro ao cancelar.");
+        exibirErroPrincipal(data.msg || "Erro ao cancelar.");
       }
-    } catch (error) { console.error(error); }
+    } catch (error) { 
+      exibirErroPrincipal("Erro de conexão ao tentar cancelar.");
+    } finally {
+      setLoading(false);
+    }
   };
+  // ==========================================
 
   const handleCheckboxServico = (idServico: number, checked: boolean) => {
     if (checked) setServicosSelecionados([...servicosSelecionados, idServico]);
@@ -199,7 +238,8 @@ export default function AgendamentoCliente() {
       
       const data = await response.json();
       if (response.ok) {
-        alert("Agendamento realizado com sucesso! Te esperamos na barbearia.");
+        // SUBSTITUÍDO O ALERT PELO NOSSO AVISO ELEGANTE
+        exibirSucesso("Agendamento realizado com sucesso! Te esperamos na barbearia.");
         setHoraSelecionada("");
         setServicosSelecionados([]);
         setObservacao("");
@@ -275,6 +315,25 @@ export default function AgendamentoCliente() {
         </Link>
       </header>
 
+      {/* FEEDBACKS VISUAIS */}
+      {sucesso && (
+        <div className="max-w-7xl mx-auto mb-6 bg-green-950/50 border border-green-900 text-green-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          <span className="font-medium">{sucesso}</span>
+        </div>
+      )}
+
+      {erroPrincipal && (
+        <div className="max-w-7xl mx-auto mb-6 bg-red-950/50 border border-red-900 text-red-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span className="font-medium">{erroPrincipal}</span>
+        </div>
+      )}
+
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10">
         
         <section className="lg:col-span-5 flex flex-col gap-6">
@@ -322,7 +381,7 @@ export default function AgendamentoCliente() {
                     {ag.status === 'AGENDADO' && (
                       <div className="mt-5 pt-4 border-t border-zinc-800/50 pl-3">
                         {podeCancelar ? (
-                          <button onClick={() => cancelarAgendamento(ag.id)} className="text-sm text-red-400 hover:text-red-300 font-medium transition-colors">
+                          <button onClick={() => abrirModalCancelar(ag.id)} disabled={loading} className="text-sm text-red-400 hover:text-red-300 font-medium transition-colors disabled:opacity-50">
                             Cancelar Agendamento
                           </button>
                         ) : (
@@ -470,6 +529,16 @@ export default function AgendamentoCliente() {
           </div>
         </section>
       </main>
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        titulo={confirmModal.titulo}
+        mensagem={confirmModal.mensagem}
+        tipo={confirmModal.tipo}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
+
     </div>
   );
 }

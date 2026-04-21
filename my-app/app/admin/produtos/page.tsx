@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-// 1. Importação do Componente Novo
-import MovimentacaoEstoqueModal from "../../components/MovimentacaoEstoqueModal"; // Ajuste o caminho se necessário
+import MovimentacaoEstoqueModal from "../../components/MovimentacaoEstoqueModal"; 
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function GerenciarProdutos() {
   const [produtos, setProdutos] = useState<any[]>([]);
@@ -11,11 +11,22 @@ export default function GerenciarProdutos() {
   const [modalAberto, setModalAberto] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // 2. Estados para o Modal de Estoque
+  // Estados para o Modal de Estoque
   const [modalMovimentacaoAberto, setModalMovimentacaoAberto] = useState(false);
   const [produtoSelecionado, setProdutoSelecionado] = useState<any>(null);
 
-  const [erro, setErro] = useState("");
+  // ESTADO DO NOSSO NOVO MODAL DE CONFIRMAÇÃO
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    titulo: "",
+    mensagem: "",
+    tipo: "atencao" as "atencao" | "perigo",
+    onConfirm: () => {}
+  });
+
+  // Feedbacks Visuais
+  const [erro, setErro] = useState(""); // Erro do modal de cadastro/edição
+  const [erroPrincipal, setErroPrincipal] = useState(""); // Erro da tela principal
   const [sucesso, setSucesso] = useState("");
   const [busca, setBusca] = useState("");
 
@@ -90,7 +101,7 @@ export default function GerenciarProdutos() {
     setDescricao(produto.descricao);
     setPrecoCusto(produto.precoCusto);
     setPrecoVenda(produto.precoVenda);
-    // IMPORTANTE: setQuantidadeEstoque NÃO é preenchido aqui para edição, pois a edição será via Modal de Movimentação.
+    // IMPORTANTE: setQuantidadeEstoque NÃO é preenchido aqui para edição
     setQuantidadeEstoque(produto.quantidadeEstoque); 
     setMarcaId(produto.marcaId ? String(produto.marcaId) : ""); 
     setErro("");
@@ -105,6 +116,11 @@ export default function GerenciarProdutos() {
   const exibirSucesso = (mensagem: string) => {
     setSucesso(mensagem);
     setTimeout(() => setSucesso(""), 3000);
+  };
+
+  const exibirErroPrincipal = (mensagem: string) => {
+    setErroPrincipal(mensagem);
+    setTimeout(() => setErroPrincipal(""), 4000);
   };
 
   const salvarProduto = async (e: React.FormEvent) => {
@@ -127,8 +143,6 @@ export default function GerenciarProdutos() {
           descricao, 
           precoCusto: Number(precoCusto), 
           precoVenda: Number(precoVenda), 
-          // Se for edição (tem ID), a API vai ignorar esse campo na maioria das arquiteturas seguras, ou manter o atual.
-          // Se for novo, vai enviar o saldo inicial.
           quantidadeEstoque: id ? undefined : Number(quantidadeEstoque), 
           marcaId: Number(marcaId) 
         }),
@@ -150,9 +164,22 @@ export default function GerenciarProdutos() {
     }
   };
 
-  const excluirProduto = async (idExclusao: string) => {
-    if (!window.confirm("Atenção: Tem certeza que deseja inativar este produto do estoque?")) return;
+  // ==========================================
+  // NOVAS FUNÇÕES USANDO O MODAL CUSTOMIZADO
+  // ==========================================
 
+  const abrirModalInativar = (idExclusao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Inativar Produto?",
+      mensagem: "Atenção: Tem certeza que deseja inativar este produto do estoque?",
+      tipo: "perigo", // Botão vermelho!
+      onConfirm: () => efetivarInativacao(idExclusao)
+    });
+  };
+
+  const efetivarInativacao = async (idExclusao: string) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/produtos/${idExclusao}`, {
         method: "DELETE",
@@ -163,16 +190,26 @@ export default function GerenciarProdutos() {
         carregarProdutos();
         exibirSucesso("Produto inativado com sucesso!");
       } else {
-        alert("Não foi possível excluir o produto.");
+        exibirErroPrincipal("Não foi possível inativar o produto.");
       }
     } catch (error) {
       console.error("Erro ao excluir", error);
+      exibirErroPrincipal("Erro de conexão ao tentar inativar.");
     }
   };
 
-  const reativarProduto = async (idReativacao: string) => {
-    if (!window.confirm("Deseja reativar este produto? Ele voltará a aparecer no sistema de vendas e estoque.")) return;
+  const abrirModalReativar = (idReativacao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Reativar Produto?",
+      mensagem: "Deseja reativar este produto? Ele voltará a aparecer no sistema de vendas e estoque.",
+      tipo: "atencao", // Botão dourado
+      onConfirm: () => efetivarReativacao(idReativacao)
+    });
+  };
 
+  const efetivarReativacao = async (idReativacao: string) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/produtos/${idReativacao}/reativar`, {
         method: "PUT",
@@ -183,12 +220,15 @@ export default function GerenciarProdutos() {
         carregarProdutos();
         exibirSucesso("Produto reativado com sucesso!");
       } else {
-        alert("Não foi possível reativar o produto.");
+        exibirErroPrincipal("Não foi possível reativar o produto.");
       }
     } catch (error) {
       console.error("Erro ao reativar", error);
+      exibirErroPrincipal("Erro de conexão ao tentar reativar.");
     }
   };
+
+  // ==========================================
 
   const produtosFiltrados = produtos.filter((p) => 
     p.nome.toLowerCase().includes(busca.toLowerCase())
@@ -221,6 +261,7 @@ export default function GerenciarProdutos() {
         </div>
       </header>
 
+      {/* FEEDBACKS VISUAIS */}
       {sucesso && (
         <div className="max-w-6xl mx-auto mb-6 bg-green-950/50 border border-green-900 text-green-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -230,10 +271,18 @@ export default function GerenciarProdutos() {
         </div>
       )}
 
+      {erroPrincipal && (
+        <div className="max-w-6xl mx-auto mb-6 bg-red-950/50 border border-red-900 text-red-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span className="font-medium">{erroPrincipal}</span>
+        </div>
+      )}
+
       {/* Barra de Pesquisa e Filtro de Inativos */}
       <div className="max-w-6xl mx-auto mb-8 flex flex-col sm:flex-row gap-4">
         
-        {/* Input de Busca */}
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500">
@@ -249,7 +298,6 @@ export default function GerenciarProdutos() {
           />
         </div>
 
-        {/* Checkbox de Inativos */}
         <div className="flex items-center gap-3 px-5 py-3 bg-zinc-900 border border-zinc-800 rounded-lg">
           <input
             type="checkbox"
@@ -301,7 +349,6 @@ export default function GerenciarProdutos() {
                             <span className={`font-bold block ${produto.ativo === 0 ? 'text-zinc-500 line-through' : 'text-white'}`}>
                               {produto.nome}
                             </span>
-                            {/* Selo Visual de Inativo */}
                             {produto.ativo === 0 && (
                               <span className="text-[10px] uppercase font-bold bg-red-900/40 text-red-400 px-2 py-0.5 rounded-md border border-red-900/50">
                                 Inativo
@@ -332,7 +379,6 @@ export default function GerenciarProdutos() {
                     <td className="p-4 text-right whitespace-nowrap">
                       <div className="flex justify-end gap-4 items-center">
                         
-                        {/* 3. BOTÃO DE ESTOQUE - Apenas para produtos ativos */}
                         {produto.ativo !== 0 && (
                           <button 
                             onClick={() => abrirModalMovimentacao(produto)}
@@ -352,17 +398,17 @@ export default function GerenciarProdutos() {
                           Editar
                         </button>
                         
-                        {/* Lógica Condicional: Se ativo=1 mostra inativar, se ativo=0 mostra reativar */}
+                        {/* BOTÕES ATUALIZADOS PARA O NOVO MODAL */}
                         {produto.ativo !== 0 ? (
                           <button 
-                            onClick={() => excluirProduto(produto.id)}
+                            onClick={() => abrirModalInativar(produto.id)}
                             className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium"
                           >
                             Inativar
                           </button>
                         ) : (
                           <button 
-                            onClick={() => reativarProduto(produto.id)}
+                            onClick={() => abrirModalReativar(produto.id)}
                             className="text-sm text-green-500 hover:text-green-400 transition-colors font-medium"
                           >
                             Reativar
@@ -417,7 +463,6 @@ export default function GerenciarProdutos() {
                   </select>
                 </div>
 
-                {/* 4. CAMPO DE ESTOQUE - Aparece SOMENTE na criação de um NOVO produto */}
                 {!id && (
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-zinc-300 mb-1">Estoque Inicial</label>
@@ -484,11 +529,20 @@ export default function GerenciarProdutos() {
           produto={produtoSelecionado}
           onClose={() => setModalMovimentacaoAberto(false)}
           onSuccess={() => {
-            carregarProdutos(); // Atualiza a tabela após a movimentação
+            carregarProdutos(); 
             exibirSucesso("Estoque atualizado com sucesso!");
           }}
         />
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        titulo={confirmModal.titulo}
+        mensagem={confirmModal.mensagem}
+        tipo={confirmModal.tipo}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
 
     </div>
   );

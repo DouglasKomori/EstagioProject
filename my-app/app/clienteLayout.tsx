@@ -140,9 +140,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         
         {usuarioLogado ? (
           <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-400 hidden sm:block">
-              Olá, <strong className="text-[#E4B77D] font-medium">{usuarioLogado.nome.split(" ")[0]}</strong>
-            </span>
+            
+            {/* O TEXTO DE OLÁ AGORA É UM BOTÃO CLICÁVEL! */}
+            <Link 
+              href={usuarioLogado.perfil !== "CLIENTE" ? "/admin/perfil" : "/perfil"} 
+              className="text-sm text-zinc-400 hidden sm:flex items-center gap-1 hover:text-white transition-colors group cursor-pointer"
+              title="Acessar meu perfil"
+            >
+              Olá, <strong className="text-[#E4B77D] font-bold group-hover:underline underline-offset-4 decoration-[#E4B77D]">{usuarioLogado.nome.split(" ")[0]}</strong>
+            </Link>
+
             <Link 
               href={usuarioLogado.perfil !== "CLIENTE" ? "/admin" : "/agendamento"} 
               className="px-4 py-2 text-sm font-bold bg-[#E4B77D] text-black rounded-md hover:bg-[#cfa56d] transition-colors"

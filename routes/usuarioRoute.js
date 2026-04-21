@@ -39,6 +39,34 @@ router.post("/",  (req, res) => {
     ctrl.cadastrar(req, res);
 });
 
+router.put('/alterar-senha', auth.validarFuncionario, (req, res) => {
+    /* #swagger.security = [{
+        "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Usuário - FUNCIONARIO']
+    // #swagger.summary = 'Permite que o usuário altere sua própria senha, fornecendo a senha atual para validação.'
+    /* #swagger.requestBody = {
+        required: true,
+        content: {
+            "application/json": {
+                schema: {
+                    type: 'object',
+                    properties: {
+                        senhaAtual: {
+                            type: 'string',
+                            example: 'senhaAtual123'
+                        },
+                        novaSenha: {
+                            type: 'string',
+                            example: 'novaSenha456'
+                        }
+                    }
+                }
+            }
+        }
+    } */
+    ctrl.alterarSenha(req, res);
+});
 
 router.post("/admin", auth.validarAdmin, (req, res) => {
     /* #swagger.security = [{

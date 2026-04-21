@@ -1,18 +1,28 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function GerenciarServicos() {
   const [servicos, setServicos] = useState<any[]>([]);
   const [modalAberto, setModalAberto] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  const [erro, setErro] = useState("");
+  // Feedbacks Visuais
+  const [erro, setErro] = useState(""); // Erro do modal
+  const [erroPrincipal, setErroPrincipal] = useState(""); // Erro da tela principal
   const [sucesso, setSucesso] = useState("");
   const [busca, setBusca] = useState("");
 
-  // NOVO: Estado para controlar o filtro de inativos
   const [mostrarInativos, setMostrarInativos] = useState(false);
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    titulo: "",
+    mensagem: "",
+    tipo: "atencao" as "atencao" | "perigo",
+    onConfirm: () => {}
+  });
 
   const [id, setId] = useState("");
   const [nome, setNome] = useState("");
@@ -20,7 +30,7 @@ export default function GerenciarServicos() {
   const [valor, setValor] = useState("");
   const [tempoEstimadoMinutos, setTempoEstimadoMinutos] = useState("");
 
-  // ATUALIZADO: Recarrega sempre que o checkbox for clicado
+  // Recarrega sempre que o checkbox for clicado
   useEffect(() => {
     carregarServicos();
   }, [mostrarInativos]);
@@ -29,7 +39,6 @@ export default function GerenciarServicos() {
     return localStorage.getItem("token") || "";
   };
 
-  // ATUALIZADO: Envia o parâmetro para a API
   const carregarServicos = async () => {
     try {
       const url = `${process.env.NEXT_PUBLIC_API_URL}/servicos${mostrarInativos ? '?inativos=true' : ''}`;
@@ -72,7 +81,12 @@ export default function GerenciarServicos() {
     setSucesso(mensagem);
     setTimeout(() => {
       setSucesso("");
-    }, 3000);
+    }, 4000);
+  };
+
+  const exibirErroPrincipal = (mensagem: string) => {
+    setErroPrincipal(mensagem);
+    setTimeout(() => setErroPrincipal(""), 4000);
   };
 
   const salvarServico = async (e: React.FormEvent) => {
@@ -114,9 +128,22 @@ export default function GerenciarServicos() {
     }
   };
 
-  const excluirServico = async (idExclusao: string) => {
-    if (!window.confirm("Tem certeza que deseja inativar este serviço?")) return;
+  // ==========================================
+  // NOVAS FUNÇÕES USANDO O MODAL CUSTOMIZADO
+  // ==========================================
 
+  const abrirModalInativar = (idExclusao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Inativar Serviço?",
+      mensagem: "Atenção: Tem certeza que deseja inativar este serviço? Ele não aparecerá mais para agendamento.",
+      tipo: "perigo", // Vermelho
+      onConfirm: () => efetivarInativacao(idExclusao)
+    });
+  };
+
+  const efetivarInativacao = async (idExclusao: string) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos/${idExclusao}`, {
         method: "DELETE",
@@ -127,16 +154,26 @@ export default function GerenciarServicos() {
         carregarServicos();
         exibirSucesso("Serviço inativado com sucesso!");
       } else {
-        alert("Não foi possível inativar o serviço.");
+        exibirErroPrincipal("Não foi possível inativar o serviço.");
       }
     } catch (error) {
       console.error("Erro ao excluir", error);
+      exibirErroPrincipal("Erro de conexão ao tentar inativar.");
     }
   };
 
-  const reativarServico = async (idReativacao: string) => {
-    if (!window.confirm("Deseja reativar este serviço? Ele voltará a ficar disponível para agendamento.")) return;
+  const abrirModalReativar = (idReativacao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Reativar Serviço?",
+      mensagem: "Deseja reativar este serviço? Ele voltará a ficar disponível para agendamento.",
+      tipo: "atencao", // Dourado
+      onConfirm: () => efetivarReativacao(idReativacao)
+    });
+  };
 
+  const efetivarReativacao = async (idReativacao: string) => {
+    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos/${idReativacao}/reativar`, {
         method: "PUT",
@@ -147,10 +184,11 @@ export default function GerenciarServicos() {
         carregarServicos();
         exibirSucesso("Serviço reativado com sucesso!");
       } else {
-        alert("Não foi possível reativar o serviço.");
+        exibirErroPrincipal("Não foi possível reativar o serviço.");
       }
     } catch (error) {
       console.error("Erro ao reativar", error);
+      exibirErroPrincipal("Erro de conexão ao tentar reativar.");
     }
   };
 
@@ -180,12 +218,22 @@ export default function GerenciarServicos() {
         </div>
       </header>
 
+      {/* FEEDBACKS VISUAIS NA TELA PRINCIPAL */}
       {sucesso && (
         <div className="max-w-6xl mx-auto mb-6 bg-green-950/50 border border-green-900 text-green-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
           <span className="font-medium">{sucesso}</span>
+        </div>
+      )}
+
+      {erroPrincipal && (
+        <div className="max-w-6xl mx-auto mb-6 bg-red-950/50 border border-red-900 text-red-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          <span className="font-medium">{erroPrincipal}</span>
         </div>
       )}
 
@@ -271,17 +319,17 @@ export default function GerenciarServicos() {
                   Editar
                 </button>
                 
-                {/* Lógica Condicional: Botão de Inativar ou Reativar */}
+                {/* Lógica Condicional: Botão de Inativar ou Reativar com Modal */}
                 {servico.excluido === 0 ? (
                   <button 
-                    onClick={() => excluirServico(servico.id)}
+                    onClick={() => abrirModalInativar(servico.id)}
                     className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium flex items-center gap-1"
                   >
                     Inativar
                   </button>
                 ) : (
                   <button 
-                    onClick={() => reativarServico(servico.id)}
+                    onClick={() => abrirModalReativar(servico.id)}
                     className="text-sm text-green-500 hover:text-green-400 transition-colors font-medium flex items-center gap-1"
                   >
                     Reativar
@@ -362,6 +410,15 @@ export default function GerenciarServicos() {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        titulo={confirmModal.titulo}
+        mensagem={confirmModal.mensagem}
+        tipo={confirmModal.tipo}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+      />
 
     </div>
   );
