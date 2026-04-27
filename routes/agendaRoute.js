@@ -42,6 +42,15 @@ router.get("/ocupados", auth.validarToken, (req,res) => {
     ctrl.listarHorariosOcupados(req,res);
 });
 
+router.get("/relatorio/agenda", auth.validarFuncionario, (req,res) => {
+    /* #swagger.security = [{
+    "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Agendas - FUNCIONARIO']
+    // #swagger.summary = "Emite o relatório da agenda filtrado por Data, Profissional, Status ou Cliente"
+    ctrl.emitirRelatorioAgenda(req,res);
+});
+
 
 router.put("/:id/status", auth.validarFuncionario, (req,res) => {
     /* #swagger.security = [{

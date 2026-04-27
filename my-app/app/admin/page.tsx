@@ -15,7 +15,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8 font-sans">
-      
+
       {/* Cabeçalho */}
       <header className="flex justify-between items-center mb-10 border-b border-zinc-900 pb-4 max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-[#E4B77D]">Painel de Gerenciamento</h1>
@@ -23,18 +23,18 @@ export default function AdminDashboard() {
           Voltar ao Início
         </Link>
       </header>
-      
+
       {/* Conteúdo Principal */}
       <main className="max-w-6xl mx-auto">
         <h2 className="text-3xl font-extrabold mb-2">Bem-vindo, {nome || "Admin"}!</h2>
         <p className="text-zinc-400 mb-10">Visão geral da Barbearia Victor Uematsu. Selecione o que deseja gerenciar hoje:</p>
-        
+
         {/* Grid ajustado para 3 colunas em telas grandes (lg) e 2 em médias (md) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
+
           {/* 1. Botão: Agenda de Hoje */}
-          <Link 
-            href="/admin/agenda" 
+          <Link
+            href="/admin/agenda"
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
           >
             <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
@@ -47,8 +47,8 @@ export default function AdminDashboard() {
           </Link>
 
           {/* 2. Botão: Disponibilidade (Escala) */}
-          <Link 
-            href="/admin/disponibilidade" 
+          <Link
+            href="/admin/disponibilidade"
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
           >
             <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
@@ -61,8 +61,8 @@ export default function AdminDashboard() {
           </Link>
 
           {/* 3. Botão: Bloqueios */}
-          <Link 
-            href="/admin/bloqueios" 
+          <Link
+            href="/admin/bloqueios"
             className="group p-6 bg-red-950/10 border border-red-900/30 rounded-xl hover:border-red-500/50 hover:bg-red-950/20 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
           >
             <div className="p-3 bg-red-950/50 rounded-lg mb-4 text-red-500 group-hover:scale-110 transition-transform">
@@ -75,8 +75,8 @@ export default function AdminDashboard() {
           </Link>
 
           {/* 4. Botão: Serviços */}
-          <Link 
-            href="/admin/servicos" 
+          <Link
+            href="/admin/servicos"
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
           >
             <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
@@ -89,8 +89,8 @@ export default function AdminDashboard() {
           </Link>
 
           {/* 5. Botão: Marcas */}
-          <Link 
-            href="/admin/marcas" 
+          <Link
+            href="/admin/marcas"
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
           >
             <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
@@ -103,8 +103,8 @@ export default function AdminDashboard() {
           </Link>
 
           {/* 6. Botão: Produtos */}
-          <Link 
-            href="/admin/produtos" 
+          <Link
+            href="/admin/produtos"
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
           >
             <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
@@ -117,8 +117,8 @@ export default function AdminDashboard() {
           </Link>
 
           {/* 7. Botão: Clientes */}
-          <Link 
-            href="/admin/clientes" 
+          <Link
+            href="/admin/clientes"
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
           >
             <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
@@ -131,8 +131,8 @@ export default function AdminDashboard() {
           </Link>
 
           {/* 8. Botão: Pessoas (Física e Jurídica) */}
-          <Link 
-            href="/admin/pessoas" 
+          <Link
+            href="/admin/pessoas"
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
           >
             <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
@@ -145,8 +145,8 @@ export default function AdminDashboard() {
           </Link>
 
           {/* 9. BOTÃO: CAIXA (NOVO) */}
-          <Link 
-            href="/admin/caixa" 
+          <Link
+            href="/admin/caixa"
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
           >
             <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
@@ -159,8 +159,8 @@ export default function AdminDashboard() {
           </Link>
 
           {/* 10. BOTÃO: COMANDAS */}
-          <Link 
-            href="/admin/comandas" 
+          <Link
+            href="/admin/comandas"
             className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
           >
             <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
@@ -170,6 +170,21 @@ export default function AdminDashboard() {
             </div>
             <h3 className="text-xl font-bold text-white group-hover:text-[#E4B77D] transition-colors">Comandas</h3>
             <p className="text-zinc-400 mt-2 text-sm">Abrir comandas, lançar consumos e fechar contas.</p>
+          </Link>
+
+          {/* 11. BOTÃO: Emissão de Agenda (NOVO) */}
+          <Link
+            href="/admin/relatorio-agenda"
+            className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
+          >
+            <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2
+                2z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-white group-hover:text-[#E4B77D] transition-colors">Emissão de Agenda</h3>
+            <p className="text-zinc-400 mt-2 text-sm">Gerar relatórios de agendamento por filtros diversos.</p>
           </Link>
 
         </div>

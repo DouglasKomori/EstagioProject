@@ -1,5 +1,7 @@
 import ComandaRepository from "../repositories/comandaRepository.js";
 import CaixaRepository from "../repositories/caixaRepository.js";
+import MovimentacaoRepository from "../repositories/movimentacaoRepository.js"; 
+import ProdutoRepository from "../repositories/produtoRepository.js";
 
 export default class ComandaController {
     #repo;
@@ -69,13 +71,55 @@ export default class ComandaController {
                 return res.status(400).json({ msg: "Abra o caixa do dia antes de receber pagamentos!" });
             }
 
+            const detalhes = await this.#repo.consultarDetalhes(id);
+
+            if (!detalhes) {
+                return res.status(404).json({ msg: "Comanda não encontrada." });
+            }
+
+            if (detalhes.produtos && detalhes.produtos.length > 0) {
+                const repoProduto = new ProdutoRepository();
+
+                for (const item of detalhes.produtos) {
+                    const produtoBanco = await repoProduto.consultarPorId(item.produtoId);
+                    
+                    if (!produtoBanco) {
+                        return res.status(404).json({ msg: `Produto ${item.produtoNome} não encontrado no cadastro.` });
+                    }
+
+                    if (produtoBanco.quantidadeEstoque < item.quantidade) {
+                        return res.status(400).json({ 
+                            msg: `Estoque insuficiente para o produto: ${item.produtoNome}. Disponível: ${produtoBanco.quantidadeEstoque}, Tentando vender: ${item.quantidade}.` 
+                        });
+                    }
+                }
+            }
+
+            if (detalhes.produtos && detalhes.produtos.length > 0) {
+                const repoMovimentacao = new MovimentacaoRepository();
+                const usuarioLogadoId = req.usuarioLogado.id;
+
+                for (const produto of detalhes.produtos) {
+                    const dadosMovimentacao = {
+                        produtoId: produto.produtoId,
+                        usuarioId: usuarioLogadoId,
+                        tipo: 'SAIDA',
+                        quantidade: produto.quantidade,
+                        motivo: `Venda finalizada na Ficha #${detalhes.numero_comanda}`
+                    };
+
+                    await repoMovimentacao.registrar(dadosMovimentacao);
+                }
+            }
+
             const result = await this.#repo.fecharComanda(id, caixaAberto.id);
             
             if (result) return res.status(200).json({ msg: "Comanda finalizada e paga!" });
             else return res.status(400).json({ msg: "Erro ao finalizar comanda." });
+
         } catch (exception) {
             console.error(exception);
-            return res.status(500).json({ msg: "Erro ao finalizar." });
+            return res.status(500).json({ msg: "Erro interno ao finalizar." });
         }
     }
 

@@ -220,9 +220,6 @@ export default function GerenciarComandas() {
     finally { setLoading(false); }
   };
 
-  // ==========================================
-  // NOVAS FUNÇÕES USANDO O MODAL CUSTOMIZADO
-  // ==========================================
 
   // 1. Remover Item da Comanda
   const abrirModalRemoverItem = (tipo: "SERVICO" | "PRODUTO", idInterno: number) => {

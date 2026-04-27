@@ -210,4 +210,23 @@ export default class AgendamentoController {
             return res.status(500).json([]);
         }
     }
+    async emitirRelatorioAgenda(req, res) {
+        try {
+            const { dataInicio, dataFim, profissionalId, status, clienteNome } = req.query;
+            
+            const filtros = {};
+            if (dataInicio) filtros.dataInicio = dataInicio;
+            if (dataFim) filtros.dataFim = dataFim;
+            if (profissionalId) filtros.profissionalId = profissionalId;
+            if (status) filtros.status = status;
+            if (clienteNome) filtros.clienteNome = clienteNome;
+
+            let lista = await this.#repo.emitirRelatorioAgenda(filtros);
+            
+            return res.status(200).json(lista);
+        } catch (exception) {
+            console.error("Erro ao emitir relatório de agenda:", exception);
+            return res.status(500).json({ erro: "Erro interno ao gerar o relatório de agendamentos." });
+        }
+    }
 }

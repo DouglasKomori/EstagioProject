@@ -100,4 +100,57 @@ export default class AgendamentoRepository {
         const rows = await this.#banco.ExecutaComando(sql, [id]);
         return rows.length > 0 ? rows[0] : null;
     }
+
+    async emitirRelatorioAgenda(filtros) {
+        let sql = `
+            SELECT 
+                a.id, 
+                a.dataHora, 
+                a.status, 
+                c.nome AS clienteNome, 
+                c.telefone AS clienteTelefone,
+                p.nome AS profissionalNome,
+                GROUP_CONCAT(s.nome SEPARATOR ', ') AS servicos
+            FROM agendamento a
+            INNER JOIN cliente c ON a.clienteId = c.id
+            INNER JOIN pessoa p ON a.profissionalId = p.id
+            LEFT JOIN agendamento_servico aserv ON a.id = aserv.agendamentoId
+            LEFT JOIN servico s ON aserv.servicoId = s.id
+            WHERE 1=1
+        `;
+
+        let params = [];
+
+        if (filtros.dataInicio && filtros.dataFim) {
+            sql += " AND a.dataHora BETWEEN ? AND ?";
+            params.push(`${filtros.dataInicio} 00:00:00`, `${filtros.dataFim} 23:59:59`);
+        } else if (filtros.dataInicio) {
+            sql += " AND a.dataHora >= ?";
+            params.push(`${filtros.dataInicio} 00:00:00`);
+        } else if (filtros.dataFim) {
+            sql += " AND a.dataHora <= ?";
+            params.push(`${filtros.dataFim} 23:59:59`);
+        }
+
+        if (filtros.profissionalId) {
+            sql += " AND a.profissionalId = ?";
+            params.push(filtros.profissionalId);
+        }
+
+        if (filtros.status) {
+            sql += " AND a.status = ?";
+            params.push(filtros.status);
+        }
+
+        if (filtros.clienteNome) {
+            sql += " AND c.nome LIKE ?";
+            params.push(`%${filtros.clienteNome}%`);
+        }
+
+        sql += " GROUP BY a.id, a.dataHora, a.status, c.nome, c.telefone, p.nome";
+        sql += " ORDER BY a.dataHora ASC";
+
+        const rows = await this.#banco.ExecutaComando(sql, params);
+        return rows;
+    }
 }
