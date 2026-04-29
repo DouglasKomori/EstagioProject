@@ -187,6 +187,20 @@ export default function AdminDashboard() {
             <p className="text-zinc-400 mt-2 text-sm">Gerar relatórios de agendamento por filtros diversos.</p>
           </Link>
 
+          {/* 12. BOTÃO: Emissão de Produtos (Relatório) */}
+          <Link
+            href="/admin/relatorio-produtos"
+            className="group p-6 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-[#E4B77D]/50 hover:bg-zinc-800/50 transition-all duration-300 hover:-translate-y-1 flex flex-col items-start shadow-lg"
+          >
+            <div className="p-3 bg-zinc-950 rounded-lg mb-4 text-[#E4B77D] group-hover:scale-110 transition-transform">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-white group-hover:text-[#E4B77D] transition-colors">Relatório de Estoque</h3>
+            <p className="text-zinc-400 mt-2 text-sm">Gerar relatórios de giro de estoque e vendas de produtos.</p>
+           </Link>
+
         </div>
       </main>
     </div>

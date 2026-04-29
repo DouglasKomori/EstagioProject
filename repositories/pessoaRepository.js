@@ -8,14 +8,18 @@ export default class PessoaRepository {
         this.#banco = new Database();
     }
 
-    async listar() {
+    async listar(incluirInativos = false) {
         let sql = `
             SELECT p.*, pf.cpf, pf.dataNascimento, pj.cnpj, pj.nomeFantasia 
             FROM pessoa p 
             LEFT JOIN pessoa_fisica pf ON p.id = pf.pessoa_id 
             LEFT JOIN pessoa_juridica pj ON p.id = pj.pessoa_id 
-            WHERE p.ativo = 1
         `;
+
+        if (!incluirInativos) {
+            sql += " WHERE p.ativo = 1";
+        }
+
         let rows = await this.#banco.ExecutaComando(sql);
         let lista = [];
         
@@ -27,7 +31,7 @@ export default class PessoaRepository {
             p.tipoPessoa = row["tipoPessoa"];
             p.telefone = row["telefone"];
             p.email = row["email"];
-            p.ativo = row["ativo"];
+            p.ativo = row["ativo"] === undefined ? true : (row["ativo"] === 1 || row["ativo"] === true);
             
             p.cpf = row["cpf"] || "";
             p.dataNascimento = row["dataNascimento"] || null;
@@ -116,6 +120,12 @@ export default class PessoaRepository {
 
     async excluir(id) {
         let sql = "UPDATE pessoa SET ativo = 0 WHERE id = ?";
+        let result = await this.#banco.ExecutaComandoNonQuery(sql, [id]);
+        return result;
+    }
+
+    async reativar(id) {
+        let sql = "UPDATE pessoa SET ativo = 1 WHERE id = ?";
         let result = await this.#banco.ExecutaComandoNonQuery(sql, [id]);
         return result;
     }

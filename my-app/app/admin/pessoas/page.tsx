@@ -11,6 +11,7 @@ export default function GerenciarPessoas() {
   const [verificandoAcesso, setVerificandoAcesso] = useState(true);
 
   const [pessoas, setPessoas] = useState<any[]>([]);
+  const [mostrarInativos, setMostrarInativos] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const [modalAcessoAberto, setModalAcessoAberto] = useState(false);
   const [pessoaSelecionada, setPessoaSelecionada] = useState<any>(null);
@@ -24,7 +25,7 @@ export default function GerenciarPessoas() {
   const [sucesso, setSucesso] = useState("");
   const [busca, setBusca] = useState("");
 
-  // ESTADO DO NOSSO NOVO MODAL DE CONFIRMAÇÃO
+  // ESTADO DO NOSSO MODAL DE CONFIRMAÇÃO
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     titulo: "",
@@ -58,7 +59,7 @@ export default function GerenciarPessoas() {
       setVerificandoAcesso(false); 
     };
     checarPermissao();
-  }, []);
+  }, [mostrarInativos]); 
 
   const obterToken = () => {
     return localStorage.getItem("token") || "";
@@ -66,12 +67,14 @@ export default function GerenciarPessoas() {
 
   const carregarPessoas = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas?inativos=${mostrarInativos}`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (response.ok) {
         const data = await response.json();
         setPessoas(data);
+      } else {
+        setPessoas([]); 
       }
     } catch (error) {
       console.error("Erro ao carregar pessoas", error);
@@ -200,18 +203,19 @@ export default function GerenciarPessoas() {
     }
   };
 
+  // === LÓGICA DE INATIVAR ===
   const abrirModalInativar = (idExclusao: string) => {
     setConfirmModal({
       isOpen: true,
       titulo: "Inativar Registro?",
       mensagem: "Atenção: Tem certeza que deseja inativar este registro do sistema?",
-      tipo: "perigo", // Vermelho
+      tipo: "perigo",
       onConfirm: () => efetivarInativacao(idExclusao)
     });
   };
 
   const efetivarInativacao = async (idExclusao: string) => {
-    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
+    setConfirmModal((prev) => ({ ...prev, isOpen: false })); 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${idExclusao}`, {
         method: "DELETE",
@@ -229,7 +233,34 @@ export default function GerenciarPessoas() {
     }
   };
 
-  // ==========================================
+  // === NOVA LÓGICA DE REATIVAR COM MODAL ===
+  const abrirModalReativar = (idReativacao: string) => {
+    setConfirmModal({
+      isOpen: true,
+      titulo: "Reativar Registro?",
+      mensagem: "Tem certeza que deseja reativar o acesso e o cadastro desta pessoa no sistema?",
+      tipo: "atencao",
+      onConfirm: () => efetivarReativacao(idReativacao)
+    });
+  };
+
+  const efetivarReativacao = async (idReativacao: string) => {
+    setConfirmModal((prev) => ({ ...prev, isOpen: false })); 
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/${idReativacao}/reativar`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      });
+      if (response.ok) {
+        carregarPessoas();
+        exibirSucesso("Registro reativado com sucesso!");
+      } else {
+        exibirErroPrincipal("Não foi possível reativar o registro.");
+      }
+    } catch (error) {
+      exibirErroPrincipal("Erro de conexão ao reativar.");
+    }
+  };
 
   const gerarAcessoAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -338,19 +369,32 @@ export default function GerenciarPessoas() {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto mb-8 relative">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+      {/* CAMPO DE BUSCA E CHECKBOX */}
+      <div className="max-w-6xl mx-auto mb-8 flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Buscar por nome, documento ou fantasia..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#E4B77D] transition-all shadow-sm"
+          />
         </div>
-        <input
-          type="text"
-          placeholder="Buscar por nome, documento ou fantasia..."
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#E4B77D] transition-all shadow-sm"
-        />
+        
+        <label className="flex items-center gap-3 cursor-pointer bg-zinc-900 border border-zinc-800 px-4 py-3 rounded-lg hover:bg-zinc-800 transition-colors">
+          <input 
+            type="checkbox" 
+            checked={mostrarInativos} 
+            onChange={(e) => setMostrarInativos(e.target.checked)} 
+            className="w-5 h-5 accent-[#E4B77D]" 
+          />
+          <span className="text-sm font-medium text-zinc-300">Mostrar Inativos</span>
+        </label>
       </div>
       
       <main className="max-w-6xl mx-auto bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-lg">
@@ -373,13 +417,13 @@ export default function GerenciarPessoas() {
                 </tr>
               ) : (
                 pessoasFiltradas.map((pessoa) => (
-                  <tr key={pessoa.id} className="hover:bg-zinc-800/50 transition-colors">
+                  <tr key={pessoa.id} className={`${pessoa.ativo ? 'hover:bg-zinc-800/50' : 'bg-red-950/10 opacity-75'} transition-colors`}>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-md flex items-center justify-center border flex-shrink-0 ${pessoa.tipoPessoa === 'PJ' ? 'bg-amber-950/30 text-amber-500 border-amber-900/50' : 'bg-zinc-800 text-[#E4B77D] border-zinc-700'}`}>
+                        <div className={`w-10 h-10 rounded-md flex items-center justify-center border flex-shrink-0 ${!pessoa.ativo ? 'bg-zinc-900 border-red-900 text-red-500' : pessoa.tipoPessoa === 'PJ' ? 'bg-amber-950/30 text-amber-500 border-amber-900/50' : 'bg-zinc-800 text-[#E4B77D] border-zinc-700'}`}>
                           {pessoa.tipoPessoa === 'PJ' ? (
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2-2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
                           ) : (
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -388,9 +432,9 @@ export default function GerenciarPessoas() {
                           )}
                         </div>
                         <div>
-                          {/* PJ mostra nome fantasia, PF mostra nome */}
-                          <span className="font-bold text-white block leading-tight">
+                          <span className="font-bold text-white block leading-tight flex items-center gap-2">
                             {pessoa.tipoPessoa === 'PJ' ? (pessoa.nomeFantasia || pessoa.nome) : pessoa.nome}
+                            {!pessoa.ativo && <span className="text-[10px] bg-red-900 text-red-200 px-2 py-0.5 rounded-sm uppercase">Inativo</span>}
                           </span>
                           <span className="text-xs font-medium text-zinc-500 tracking-wider">
                             {pessoa.tipoPessoa === 'PJ' ? 'FORNECEDOR (PJ)' : 'FUNCIONÁRIO (PF)'}
@@ -408,32 +452,43 @@ export default function GerenciarPessoas() {
                     <td className="p-4 text-right whitespace-nowrap">
                       <div className="flex justify-end gap-3 items-center">
                         
-                        {pessoa.tipoPessoa === 'PF' && (
-                           <button 
-                             onClick={() => abrirModalAcesso(pessoa)}
-                             title="Gerar acesso ao sistema"
-                             className="text-sm px-3 py-1 bg-zinc-800 text-[#E4B77D] hover:bg-zinc-700 border border-zinc-700 rounded-md transition-colors font-medium flex items-center gap-1"
-                           >
-                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                             </svg>
-                             Acesso
-                           </button>
+                        {!pessoa.ativo ? (
+                          <button 
+                            onClick={() => abrirModalReativar(pessoa.id)}
+                            className="text-sm text-green-500 hover:text-green-400 transition-colors font-medium border border-green-900/50 bg-green-950/30 px-3 py-1 rounded"
+                          >
+                            Reativar
+                          </button>
+                        ) : (
+                          <>
+                            {pessoa.tipoPessoa === 'PF' && (
+                               <button 
+                                 onClick={() => abrirModalAcesso(pessoa)}
+                                 title="Gerar acesso ao sistema"
+                                 className="text-sm px-3 py-1 bg-zinc-800 text-[#E4B77D] hover:bg-zinc-700 border border-zinc-700 rounded-md transition-colors font-medium flex items-center gap-1"
+                               >
+                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                 </svg>
+                                 Acesso
+                               </button>
+                            )}
+
+                            <button 
+                              onClick={() => abrirModalEditar(pessoa)}
+                              className="text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium ml-2"
+                            >
+                              Editar
+                            </button>
+
+                            <button 
+                              onClick={() => abrirModalInativar(pessoa.id)}
+                              className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium"
+                            >
+                              Inativar
+                            </button>
+                          </>
                         )}
-
-                        <button 
-                          onClick={() => abrirModalEditar(pessoa)}
-                          className="text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium ml-2"
-                        >
-                          Editar
-                        </button>
-
-                        <button 
-                          onClick={() => abrirModalInativar(pessoa.id)}
-                          className="text-sm text-red-500 hover:text-red-400 transition-colors font-medium"
-                        >
-                          Inativar
-                        </button>
 
                       </div>
                     </td>
@@ -445,6 +500,7 @@ export default function GerenciarPessoas() {
         </div>
       </main>
 
+      {/* MODAL DE CADASTRO/EDIÇÃO */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setModalAberto(false)} />
@@ -564,6 +620,7 @@ export default function GerenciarPessoas() {
         </div>
       )}
 
+      {/* MODAL DE ACESSO */}
       {modalAcessoAberto && pessoaSelecionada && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setModalAcessoAberto(false)} />
@@ -618,6 +675,7 @@ export default function GerenciarPessoas() {
         </div>
       )}
 
+      {/* MODAL DE CONFIRMAÇÃO GLOBAL */}
       <ConfirmModal 
         isOpen={confirmModal.isOpen}
         titulo={confirmModal.titulo}

@@ -173,6 +173,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="font-medium">Emissão de Agenda</span>
             </Link>
 
+            {/* Link: Emissão de Produtos (Relatório) */}
+            <Link href="/admin/relatorio-produtos" className="flex items-center gap-4 px-4 py-3 rounded-lg text-zinc-300 hover:text-[#E4B77D] hover:bg-zinc-900/50 transition-all group">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500 group-hover:text-[#E4B77D] transition-colors">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+              <span className="font-medium">Relatório de Estoque</span>
+            </Link>
+
           </nav>
 
           <div className="mt-8 pt-6 border-t border-zinc-900 shrink-0 text-sm text-zinc-500 text-center">

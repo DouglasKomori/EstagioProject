@@ -139,4 +139,24 @@ export default class ProdutoController {
             return res.status(500).json({msg: "Erro ao consultar o produto!"});
         }
     }
+    
+    async emitirRelatorioGiro(req, res) {
+        try {
+            const { dataInicio, dataFim, marcaId, ordem, estoqueBaixo } = req.query;
+            
+            const filtros = {};
+            if (dataInicio) filtros.dataInicio = dataInicio;
+            if (dataFim) filtros.dataFim = dataFim;
+            if (marcaId) filtros.marcaId = marcaId;
+            if (ordem) filtros.ordem = ordem;
+            if (estoqueBaixo) filtros.estoqueBaixo = estoqueBaixo;
+
+            let lista = await this.#repoProdutos.relatorioGiroProdutos(filtros);
+            
+            return res.status(200).json(lista);
+        } catch (exception) {
+            console.error("Erro ao emitir relatório de giro de produtos:", exception);
+            return res.status(500).json({ msg: "Erro interno ao gerar o relatório." });
+        }
+    }
 }

@@ -24,6 +24,15 @@ router.post("/", auth.validarFuncionario, (req,res) => {
     ctrl.cadastrar(req,res);
 });
 
+router.get("/relatorio/giro", auth.validarFuncionario, (req,res) => {
+    /* #swagger.security = [{
+    "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Produtos - FUNCIONARIO']
+    // #swagger.summary = "Gera um relatório de giro de estoque dos Produtos"
+    ctrl.emitirRelatorioGiro(req,res);
+});
+
 router.put("/:id", auth.validarFuncionario, (req,res) => {
     /* #swagger.security = [{
     "bearerAuth": []    

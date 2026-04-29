@@ -42,7 +42,10 @@ export default class PessoaController {
 
     async listar(req, res) {
         try {
-            let lista = await this.#repoPessoa.listar();
+            const incluirInativos = req.query.inativos === 'true';
+            
+            let lista = await this.#repoPessoa.listar(incluirInativos);
+            
             if(lista.length === 0){
                 return res.status(404).json({msg: "Nenhum registro encontrado!"});
             }
@@ -154,6 +157,23 @@ export default class PessoaController {
         } catch(exception) {
             console.log(exception);
             return res.status(500).json({msg: "Erro ao excluir o cadastro!"});
+        }
+    }
+
+    async reativar(req, res) {
+        try {
+            let id = req.params.id;
+            if(!id){ return res.status(400).json({msg: "Informe o id para reativar!"}); }
+            
+            const result = await this.#repoPessoa.reativar(id);
+            if(result){
+                return res.status(200).json({msg: "Cadastro reativado com sucesso!"});
+            } else {
+                return res.status(400).json({msg: "Não foi possível reativar o cadastro!"});
+            }
+        } catch(exception) {
+            console.log(exception);
+            return res.status(500).json({msg: "Erro ao reativar o cadastro!"});
         }
     }
 

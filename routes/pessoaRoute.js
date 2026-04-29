@@ -52,6 +52,15 @@ router.delete("/:id", auth.validarAdmin, (req,res) => {
     ctrl.excluir(req,res);
 });
 
+router.put("/:id/reativar", auth.validarFuncionario, (req,res) => {
+    /* #swagger.security = [{
+    "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Pessoas - FUNCIONÁRIO']
+    // #swagger.summary = "Reativa uma Pessoa inativada"
+    ctrl.reativar(req,res);
+});
+
 router.get("/:id", auth.validarAdmin, (req,res) => {
     /* #swagger.security = [{
     "bearerAuth": []
