@@ -15,7 +15,9 @@ export default class Database {
             user: process.env.DB_USER || 'root', 
             password: process.env.DB_PASSWORD || '',
             idleTimeout: 30000,
-            connectionLimit: 50
+            connectionLimit: 50,
+            timezone: '-03:00',
+            dateStrings: true
         });
     }
 
