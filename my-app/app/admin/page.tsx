@@ -175,6 +175,16 @@ export default function AdminDashboard() {
               </div>
             </Link>
 
+            <Link href="/admin/relatorio-servicos" className="group flex items-center p-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-yellow-500/50 hover:bg-zinc-800/80 transition-all duration-300">
+              <div className="p-3 bg-yellow-950/30 rounded-lg text-yellow-500 group-hover:scale-110 transition-all mr-4 border border-yellow-900/50">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6h13m0 0V5a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2h3m7 0h3m-3 0v6m0-6H9" /></svg>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white group-hover:text-yellow-400 transition-colors">Relatório de Serviços</h3>
+                <p className="text-zinc-500 text-xs mt-0.5 line-clamp-1">Serviços mais vendidos e receita por serviço</p>
+              </div>
+            </Link>
+
           </div>
         </section>
 
