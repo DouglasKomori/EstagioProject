@@ -117,7 +117,6 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
   const spotW = rect.width  + PAD * 2;
   const spotH = rect.height + PAD * 2;
 
-  // Posição do balão
   const BALAO_W = 300;
   const BALAO_OFFSET = 16;
   let balaoStyle: React.CSSProperties = {};
@@ -150,7 +149,6 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
 
   return (
     <>
-      {/* ── Overlay com buraco (SVG clipPath) ── */}
       <div className="fixed inset-0 z-40 pointer-events-none">
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -167,7 +165,6 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
             fill="rgba(0,0,0,0.75)"
             mask="url(#spotlight-mask)"
           />
-          {/* Borda dourada ao redor do elemento */}
           <rect
             x={spotX} y={spotY} width={spotW} height={spotH}
             rx="8" ry="8"
@@ -182,10 +179,8 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
         </svg>
       </div>
 
-      {/* Overlay clicável para fechar */}
       <div className="fixed inset-0 z-40" onClick={onFechar} />
 
-      {/* ── Balão explicativo ── */}
       <div
         className="fixed z-50 pointer-events-auto"
         style={{
@@ -197,8 +192,6 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-zinc-900 border border-[#E4B77D]/40 rounded-xl shadow-2xl overflow-hidden">
-
-          {/* Cabeçalho */}
           <div className="flex items-center justify-between px-4 pt-4 pb-2">
             <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
               {passo + 1} de {TOUR_STEPS.length}
@@ -213,7 +206,6 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
             </button>
           </div>
 
-          {/* Barra de progresso */}
           <div className="mx-4 h-1 bg-zinc-800 rounded-full overflow-hidden">
             <div
               className="h-full bg-[#E4B77D] rounded-full transition-all duration-500"
@@ -221,13 +213,11 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
             />
           </div>
 
-          {/* Conteúdo */}
           <div className="px-4 py-4">
             <h3 className="text-sm font-bold text-[#E4B77D] mb-1">{step.titulo}</h3>
             <p className="text-xs text-zinc-400 leading-relaxed">{step.descricao}</p>
           </div>
 
-          {/* Navegação */}
           <div className="flex items-center justify-between px-4 pb-4 gap-2">
             <button
               onClick={onAnterior}
@@ -237,7 +227,6 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
               ← Anterior
             </button>
 
-            {/* Dots */}
             <div className="flex gap-1">
               {TOUR_STEPS.map((_, i) => (
                 <div key={i}
@@ -263,11 +252,9 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
               </button>
             )}
           </div>
-
         </div>
       </div>
 
-      {/* Animação keyframe via style tag */}
       <style>{`
         @keyframes tourBalloonIn {
           0%   { opacity: 0; transform: scale(0.85) translateY(6px); }
@@ -356,30 +343,6 @@ export default function RelatorioServicos() {
       const params = new URLSearchParams();
       if (filtroDataInicio) params.append("dataInicio", filtroDataInicio);
       if (filtroDataFim)    params.append("dataFim",    filtroDataFim);
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/servicos/relatorio/detalhe/${servicoId}?${params}`,
-        { headers: { Authorization: `Bearer ${obterToken()}` } }
-      );
-      setDetalhes((d) => ({ ...d, [servicoId]: res.ok ? (res.json() as any) : [] }));
-      // fix: await properly
-      const dados = res.ok ? await (await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/servicos/relatorio/detalhe/${servicoId}?${params}`,
-        { headers: { Authorization: `Bearer ${obterToken()}` } }
-      )).json() : [];
-      setDetalhes((d) => ({ ...d, [servicoId]: dados }));
-    } catch { setDetalhes((d) => ({ ...d, [servicoId]: [] })); }
-    finally  { setLoadingDetalhe(false); }
-  };
-
-  const toggleDetalheFixed = async (servicoId: number) => {
-    if (expandido === servicoId) { setExpandido(null); return; }
-    setExpandido(servicoId);
-    if (detalhes[servicoId]) return;
-    setLoadingDetalhe(true);
-    try {
-      const params = new URLSearchParams();
-      if (filtroDataInicio) params.append("dataInicio", filtroDataInicio);
-      if (filtroDataFim)    params.append("dataFim",    filtroDataFim);
       const res  = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/servicos/relatorio/detalhe/${servicoId}?${params}`,
         { headers: { Authorization: `Bearer ${obterToken()}` } }
@@ -441,156 +404,246 @@ export default function RelatorioServicos() {
   );
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8 font-sans print:bg-white print:text-black print:p-0">
+    <>
+      {/* ════════════════════════════════════════════════════════
+          ESTILOS DE IMPRESSÃO — fundo branco, econômico, limpo
+          (padrão idêntico ao relatório de produtos)
+          ════════════════════════════════════════════════════════ */}
+      <style>{`
+        @media print {
+          /* Força fundo branco e texto preto em TUDO */
+          *, *::before, *::after {
+            background: white !important;
+            color: black !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
 
-      {/* Tour spotlight */}
-      {tourAtivo && (
-        <Tour
-          passo={tourPasso}
-          entrando={tourEntrando}
-          onProximo={() => irParaPasso(tourPasso + 1)}
-          onAnterior={() => irParaPasso(tourPasso - 1)}
-          onFechar={() => setTourAtivo(false)}
-        />
-      )}
+          /* Oculta elementos de tela */
+          header, section, nav,
+          .print-hide { display: none !important; }
 
-      {/* ── HEADER ──────────────────────────────────────────── */}
-      <header className="flex flex-col md:flex-row md:justify-between items-center mb-6 border-b border-zinc-900 pb-4 max-w-6xl mx-auto print:hidden gap-4 md:gap-0">
-        <div>
-          <h1 className="text-2xl font-bold text-[#E4B77D] flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none"
-              viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            Relatório de Serviços
-          </h1>
-          <p className="text-sm text-zinc-400 mt-1">Frequência e receita por serviço prestado.</p>
-        </div>
+          /* Remove container visual da tabela */
+          main {
+            border: none !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
 
-        <div className="flex items-center gap-3">
-          {/* Botão Ajuda */}
-          <button id="tour-ajuda" onClick={iniciarTour}
-            className="px-4 py-2 bg-zinc-800 text-[#E4B77D] font-bold rounded-md hover:bg-zinc-700
-              transition-all border border-[#E4B77D]/30 hover:border-[#E4B77D]/70 flex items-center gap-2 text-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none"
-              viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            ? Ajuda
-          </button>
+          /* Tabela limpa com bordas finas */
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 12px !important;
+          }
+          th {
+            background: #f5f5f5 !important;
+            color: #000 !important;
+            border: 1px solid #bbb !important;
+            padding: 7px 10px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            font-size: 10px !important;
+            letter-spacing: 0.05em !important;
+          }
+          td {
+            border: 1px solid #ccc !important;
+            padding: 7px 10px !important;
+            color: #000 !important;
+          }
+          /* Linhas alternadas para legibilidade */
+          tbody tr:nth-child(even) td {
+            background: #fafafa !important;
+          }
 
-          <Link href="/admin"
-            className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-            Voltar
-          </Link>
+          /* Badges: apenas texto com borda neutra */
+          .freq-badge,
+          .posicao-badge {
+            background: transparent !important;
+            border: 1px solid #999 !important;
+            color: #000 !important;
+            padding: 2px 8px !important;
+            border-radius: 999px !important;
+            font-weight: 700 !important;
+          }
 
-          <button id="tour-imprimir" onClick={() => window.print()}
-            className="px-6 py-2 bg-zinc-800 text-white font-bold rounded-md hover:bg-zinc-700
-              transition-colors border border-zinc-700 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
-              viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            Imprimir PDF
-          </button>
-        </div>
-      </header>
+          /* Oculta coluna volume e detalhe na impressão */
+          .col-volume,
+          .col-detalhe { display: none !important; }
 
-      {/* ── CABEÇALHO IMPRESSÃO ──────────────────────────────── */}
-      <div className="hidden print:block text-center mb-6 border-b-2 border-black pb-4">
-        <h1 className="text-2xl font-black uppercase tracking-widest">Barbearia Victor Uematsu</h1>
-        <h2 className="text-lg font-bold mt-1">Relatório de Serviços</h2>
-        <p className="text-sm mt-1">
-          Período: {fmtData(`${filtroDataInicio}T00:00:00`)} até {fmtData(`${filtroDataFim}T00:00:00`)}
-          {filtroProfissional && profissionais.find(p => p.id == Number(filtroProfissional))
-            ? ` · ${profissionais.find(p => p.id == Number(filtroProfissional))?.nome}`
-            : " · Todos os profissionais"}
-        </p>
-        <div className="flex justify-center gap-10 mt-4 pt-4 border-t border-gray-300">
-          <div><span className="text-xs text-gray-500 uppercase">Execuções</span><br />
-            <strong className="text-xl">{totalExecucoes}</strong></div>
-          <div><span className="text-xs text-gray-500 uppercase">Receita Total</span><br />
-            <strong className="text-xl">{fmt(totalReceita)}</strong></div>
-        </div>
-      </div>
+          /* Oculta linha de detalhe expandida */
+          .detalhe-row { display: none !important; }
 
-      {/* ── FILTROS ──────────────────────────────────────────── */}
-      <section className="max-w-6xl mx-auto bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-lg mb-8 print:hidden">
+          /* Cabeçalho de impressão */
+          .print-header { display: block !important; }
+        }
+      `}</style>
 
-        {/* Intervalos */}
-        <div id="tour-intervalos" className="mb-5">
-          <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Intervalo de tempo</span>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {INTERVALOS.map(({ label, dias }) => (
-              <button key={label} type="button" onClick={() => aplicarIntervalo(label, dias)}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold border transition-colors
-                  ${intervaloAtivo === label
-                    ? "bg-[#E4B77D] text-black border-[#E4B77D]"
-                    : "bg-zinc-950 text-zinc-400 border-zinc-700 hover:border-[#E4B77D] hover:text-[#E4B77D]"}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8 font-sans">
 
-        <form onSubmit={handleBuscar} className="flex flex-wrap gap-4 items-end">
+        {/* Tour spotlight */}
+        {tourAtivo && (
+          <Tour
+            passo={tourPasso}
+            entrando={tourEntrando}
+            onProximo={() => irParaPasso(tourPasso + 1)}
+            onAnterior={() => irParaPasso(tourPasso - 1)}
+            onFechar={() => setTourAtivo(false)}
+          />
+        )}
 
-          <div id="tour-datas" className="flex gap-4 flex-1 min-w-[280px]">
-            <div className="flex-1 min-w-[130px]">
-              <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Início</label>
-              <input type="date" value={filtroDataInicio}
-                onChange={(e) => handleDataChange("inicio", e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-3 text-white focus:border-[#E4B77D] outline-none" />
+        {/* ── CABEÇALHO DE IMPRESSÃO ─────────────────────────── */}
+        <div className="print-header hidden mb-8 pb-6 border-b-2 border-black text-center">
+          <h1 className="text-2xl font-black uppercase tracking-widest">Barbearia Victor Uematsu</h1>
+          <h2 className="text-lg font-bold mt-1">Relatório de Serviços</h2>
+          <p className="text-sm mt-2 text-gray-600">
+            Período: {fmtData(`${filtroDataInicio}T00:00:00`)} até {fmtData(`${filtroDataFim}T00:00:00`)}
+            {filtroProfissional && profissionais.find(p => p.id == Number(filtroProfissional))
+              ? ` · ${profissionais.find(p => p.id == Number(filtroProfissional))?.nome}`
+              : " · Todos os profissionais"}
+          </p>
+          <p className="text-xs mt-1 text-gray-400">
+            Impresso em {new Date().toLocaleDateString("pt-BR")} às {new Date().toLocaleTimeString("pt-BR")}
+          </p>
+          <div className="flex justify-center gap-10 mt-4 pt-4 border-t border-gray-300">
+            <div>
+              <span className="text-xs text-gray-500 uppercase">Total de Execuções</span><br />
+              <strong className="text-xl">{totalExecucoes}</strong>
             </div>
-            <div className="flex-1 min-w-[130px]">
-              <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Fim</label>
-              <input type="date" value={filtroDataFim}
-                onChange={(e) => handleDataChange("fim", e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-3 text-white focus:border-[#E4B77D] outline-none" />
+            <div>
+              <span className="text-xs text-gray-500 uppercase">Receita Total</span><br />
+              <strong className="text-xl">{fmt(totalReceita)}</strong>
+            </div>
+            <div>
+              <span className="text-xs text-gray-500 uppercase">Serviços listados</span><br />
+              <strong className="text-xl">{relatorio.length}</strong>
             </div>
           </div>
+        </div>
 
-          <div id="tour-profissional" className="flex-1 min-w-[180px]">
-            <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Profissional</label>
-            <select value={filtroProfissional} onChange={(e) => setFiltroProfissional(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-3 text-white focus:border-[#E4B77D] outline-none">
-              <option value="">Todos os Profissionais</option>
-              {profissionais.map((p) => (
-                <option key={p.id} value={p.id}>{p.nome}</option>
-              ))}
-            </select>
-          </div>
-
-          <div id="tour-ordenacao" className="flex-1 min-w-[200px]">
-            <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Ordenar por</label>
-            <select value={filtroOrdem} onChange={(e) => setFiltroOrdem(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-3 text-white focus:border-[#E4B77D] outline-none">
-              <option value="frequencia">Mais Frequente (Qtd)</option>
-              <option value="receita">Maior Receita (R$)</option>
-              <option value="nome">Ordem Alfabética</option>
-            </select>
-          </div>
-
-          <button id="tour-buscar" type="submit" disabled={loading}
-            className="px-8 py-3 bg-[#E4B77D] text-black font-bold rounded-md hover:bg-[#cfa56d] transition-colors h-[50px] min-w-[120px] flex items-center justify-center">
-            {loading ? (
-              <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg"
-                fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+        {/* ── HEADER TELA ────────────────────────────────────── */}
+        <header className="print-hide flex flex-col md:flex-row md:justify-between items-center mb-6 border-b border-zinc-900 pb-4 max-w-6xl mx-auto gap-4 md:gap-0">
+          <div>
+            <h1 className="text-2xl font-bold text-[#E4B77D] flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-            ) : "Buscar"}
-          </button>
-        </form>
-      </section>
+              Relatório de Serviços
+            </h1>
+            <p className="text-sm text-zinc-400 mt-1">Frequência e receita por serviço prestado.</p>
+          </div>
 
-      {/* ── KPIs ──────────────────────────────────────────────── */}
-      {!loading && kpis && (
-        <div id="tour-kpis" className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 print:hidden">
+          <div className="flex items-center gap-3">
+            <button id="tour-ajuda" onClick={iniciarTour}
+              className="px-4 py-2 bg-zinc-800 text-[#E4B77D] font-bold rounded-md hover:bg-zinc-700
+                transition-all border border-[#E4B77D]/30 hover:border-[#E4B77D]/70 flex items-center gap-2 text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              ? Ajuda
+            </button>
 
+            <Link href="/admin"
+              className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+              Voltar
+            </Link>
+
+            <button id="tour-imprimir" onClick={() => window.print()}
+              className="px-6 py-2 bg-zinc-800 text-white font-bold rounded-md hover:bg-zinc-700
+                transition-colors border border-zinc-700 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Imprimir PDF
+            </button>
+          </div>
+        </header>
+
+        {/* ── FILTROS ──────────────────────────────────────────── */}
+        <section className="print-hide max-w-6xl mx-auto bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-lg mb-8">
+
+          <div id="tour-intervalos" className="mb-5">
+            <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Intervalo de tempo</span>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {INTERVALOS.map(({ label, dias }) => (
+                <button key={label} type="button" onClick={() => aplicarIntervalo(label, dias)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-bold border transition-colors
+                    ${intervaloAtivo === label
+                      ? "bg-[#E4B77D] text-black border-[#E4B77D]"
+                      : "bg-zinc-950 text-zinc-400 border-zinc-700 hover:border-[#E4B77D] hover:text-[#E4B77D]"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <form onSubmit={handleBuscar} className="flex flex-wrap gap-4 items-end">
+
+            <div id="tour-datas" className="flex gap-4 flex-1 min-w-[280px]">
+              <div className="flex-1 min-w-[130px]">
+                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Início</label>
+                <input type="date" value={filtroDataInicio}
+                  onChange={(e) => handleDataChange("inicio", e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-3 text-white focus:border-[#E4B77D] outline-none" />
+              </div>
+              <div className="flex-1 min-w-[130px]">
+                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Fim</label>
+                <input type="date" value={filtroDataFim}
+                  onChange={(e) => handleDataChange("fim", e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-3 text-white focus:border-[#E4B77D] outline-none" />
+              </div>
+            </div>
+
+            <div id="tour-profissional" className="flex-1 min-w-[180px]">
+              <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Profissional</label>
+              <select value={filtroProfissional} onChange={(e) => setFiltroProfissional(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-3 text-white focus:border-[#E4B77D] outline-none">
+                <option value="">Todos os Profissionais</option>
+                {profissionais.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            <div id="tour-ordenacao" className="flex-1 min-w-[200px]">
+              <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Ordenar por</label>
+              <select value={filtroOrdem} onChange={(e) => setFiltroOrdem(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-md p-3 text-white focus:border-[#E4B77D] outline-none">
+                <option value="frequencia">Mais Frequente (Qtd)</option>
+                <option value="receita">Maior Receita (R$)</option>
+                <option value="nome">Ordem Alfabética</option>
+              </select>
+            </div>
+
+            <button id="tour-buscar" type="submit" disabled={loading}
+              className="px-8 py-3 bg-[#E4B77D] text-black font-bold rounded-md hover:bg-[#cfa56d] transition-colors h-[50px] min-w-[120px] flex items-center justify-center">
+              {loading ? (
+                <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg"
+                  fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              ) : "Buscar"}
+            </button>
+          </form>
+        </section>
+
+        {/* ── KPIs ──────────────────────────────────────────────── */}
+        <div
+          id="tour-kpis"
+          className={`print-hide max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 mb-6
+            transition-all duration-300
+            ${!loading && kpis ? "opacity-100" : "opacity-0 pointer-events-none h-20"}`}
+        >
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-4">
             <div className="w-11 h-11 bg-[#E4B77D]/10 text-[#E4B77D] rounded-full flex items-center justify-center border border-[#E4B77D]/20 shrink-0">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -600,7 +653,7 @@ export default function RelatorioServicos() {
             </div>
             <div>
               <span className="block text-xs font-bold text-zinc-500 uppercase tracking-widest">Total de Execuções</span>
-              <strong className="text-2xl text-white">{Number(kpis.totalExecucoes || 0).toLocaleString("pt-BR")}</strong>
+              <strong className="text-2xl text-white">{Number(kpis?.totalExecucoes || 0).toLocaleString("pt-BR")}</strong>
             </div>
           </div>
 
@@ -613,7 +666,7 @@ export default function RelatorioServicos() {
             </div>
             <div>
               <span className="block text-xs font-bold text-zinc-500 uppercase tracking-widest">Receita Total</span>
-              <strong className="text-xl text-green-400">{fmt(kpis.receitaTotal)}</strong>
+              <strong className="text-xl text-green-400">{fmt(kpis?.receitaTotal)}</strong>
             </div>
           </div>
 
@@ -626,131 +679,130 @@ export default function RelatorioServicos() {
             </div>
             <div>
               <span className="block text-xs font-bold text-zinc-500 uppercase tracking-widest">Clientes Atendidos</span>
-              <strong className="text-2xl text-blue-400">{Number(kpis.totalClientesAtendidos || 0).toLocaleString("pt-BR")}</strong>
+              <strong className="text-2xl text-blue-400">{Number(kpis?.totalClientesAtendidos || 0).toLocaleString("pt-BR")}</strong>
             </div>
           </div>
-
         </div>
-      )}
 
-      {/* ── ERRO ─────────────────────────────────────────────── */}
-      {erro && (
-        <div className="max-w-6xl mx-auto mb-6 bg-red-950/30 border border-red-900 text-red-400 p-4 rounded-lg text-center print:hidden">
-          {erro}
-        </div>
-      )}
+        {/* ── ERRO ─────────────────────────────────────────────── */}
+        {erro && (
+          <div className="print-hide max-w-6xl mx-auto mb-6 bg-red-950/30 border border-red-900 text-red-400 p-4 rounded-lg text-center">
+            {erro}
+          </div>
+        )}
 
-      {/* ── TABELA ───────────────────────────────────────────── */}
-      <main id="tour-tabela" className="max-w-6xl mx-auto bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-lg print:bg-white print:border-none print:shadow-none print:rounded-none">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse print:border print:border-black">
-            <thead>
-              <tr className="bg-zinc-950 border-b border-zinc-800 text-zinc-400 text-xs uppercase tracking-widest print:bg-gray-200 print:text-black">
-                <th className="p-4 font-bold w-12">#</th>
-                <th className="p-4 font-bold border-r border-zinc-800/50 print:border-black">Serviço</th>
-                <th className="p-4 font-bold border-r border-zinc-800/50 print:border-black text-center w-36">Frequência</th>
-                <th className="p-4 font-bold border-r border-zinc-800/50 print:hidden w-48">Volume</th>
-                <th className="p-4 font-bold print:border-black text-right w-40">Receita Total</th>
-                <th className="p-4 font-bold print:hidden text-center w-24">Detalhe</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-zinc-800 print:divide-black">
-
-              {relatorio.length === 0 && !loading && !erro && (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-zinc-500 italic">
-                    Nenhum serviço encontrado para os filtros informados.
-                  </td>
+        {/* ── TABELA ───────────────────────────────────────────── */}
+        <main id="tour-tabela" className="max-w-6xl mx-auto bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-lg">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-zinc-950 border-b border-zinc-800 text-zinc-400 text-xs uppercase tracking-widest">
+                  <th className="p-4 font-bold w-12">#</th>
+                  <th className="p-4 font-bold border-r border-zinc-800/50">Serviço</th>
+                  <th className="p-4 font-bold border-r border-zinc-800/50 text-center w-36">Frequência</th>
+                  <th className="p-4 font-bold border-r border-zinc-800/50 col-volume w-48">Volume</th>
+                  <th className="p-4 font-bold text-right w-40">Receita Total</th>
+                  <th className="p-4 font-bold col-detalhe text-center w-24">Detalhe</th>
                 </tr>
-              )}
+              </thead>
+              <tbody className="text-sm divide-y divide-zinc-800">
 
-              {relatorio.map((item, idx) => (
-                <React.Fragment key={item.servicoId}>
-                  <tr onClick={() => toggleDetalheFixed(item.servicoId)}
-                    className="hover:bg-zinc-800/30 transition-colors cursor-pointer print:hover:bg-transparent">
-                    <td className="p-4 text-center">{posicaoBadge(idx)}</td>
-                    <td className="p-4 border-r border-zinc-800/50 print:border-black">
-                      <div className="font-bold text-white print:text-black">{item.servicoNome}</div>
-                      <div className="text-xs text-zinc-500 mt-0.5">Preço base: {fmt(item.precoBase)}</div>
-                    </td>
-                    <td className="p-4 border-r border-zinc-800/50 text-center">
-                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold bg-[#E4B77D]/10 text-[#E4B77D] border border-[#E4B77D]/20 print:bg-transparent print:text-black print:border-black">
-                        {item.frequencia}x
-                      </span>
-                    </td>
-                    <td className="p-4 border-r border-zinc-800/50 print:hidden">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-zinc-800 rounded-full h-2 overflow-hidden">
-                          <div className="h-full bg-[#E4B77D] rounded-full transition-all duration-500"
-                            style={{ width: `${(Number(item.frequencia) / maxFreq) * 100}%` }} />
-                        </div>
-                        <span className="text-xs text-zinc-500 w-8 text-right">
-                          {Math.round((Number(item.frequencia) / maxFreq) * 100)}%
-                        </span>
-                      </div>
-                    </td>
-                    <td className="p-4 text-right font-mono print:border-black">
-                      <div className="text-green-400 font-bold text-base print:text-black">{fmt(item.receitaTotal)}</div>
-                    </td>
-                    <td className="p-4 text-center print:hidden">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor"
-                        className={`mx-auto text-[#E4B77D] transition-transform duration-200 ${
-                          expandido === item.servicoId ? "rotate-180" : ""}`}>
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
+                {relatorio.length === 0 && !loading && !erro && (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-zinc-500 italic">
+                      Nenhum serviço encontrado para os filtros informados.
                     </td>
                   </tr>
+                )}
 
-                  {expandido === item.servicoId && (
-                    <tr>
-                      <td colSpan={6} className="p-0 print:hidden">
-                        <div className="bg-zinc-950 border-l-4 border-[#E4B77D] px-6 py-4">
-                          <p className="text-xs font-bold text-[#E4B77D] uppercase tracking-widest mb-3">
-                            Detalhamento por Profissional — {item.servicoNome}
-                          </p>
-                          {loadingDetalhe && !detalhes[item.servicoId] ? (
-                            <p className="text-zinc-500 text-sm">Carregando...</p>
-                          ) : (detalhes[item.servicoId] || []).length === 0 ? (
-                            <p className="text-zinc-500 text-sm italic">Sem dados para este serviço.</p>
-                          ) : (
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="text-zinc-500 text-xs uppercase tracking-widest border-b border-zinc-800">
-                                  <th className="py-2 text-left font-bold">Profissional</th>
-                                  <th className="py-2 text-center font-bold w-32">Execuções</th>
-                                  <th className="py-2 text-right font-bold w-40">Receita</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-zinc-800/50">
-                                {(detalhes[item.servicoId] || []).map((d: any) => (
-                                  <tr key={d.profissionalId} className="hover:bg-zinc-900/50">
-                                    <td className="py-2.5 font-medium text-white">{d.profissionalNome}</td>
-                                    <td className="py-2.5 text-center">
-                                      <span className="px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-300 text-xs font-bold">
-                                        {d.frequencia}x
-                                      </span>
-                                    </td>
-                                    <td className="py-2.5 text-right text-green-400 font-mono font-bold">
-                                      {fmt(d.receitaTotal)}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          )}
+                {relatorio.map((item, idx) => (
+                  <React.Fragment key={item.servicoId}>
+                    <tr onClick={() => toggleDetalhe(item.servicoId)}
+                      className="hover:bg-zinc-800/30 transition-colors cursor-pointer">
+                      <td className="p-4 text-center">{posicaoBadge(idx)}</td>
+                      <td className="p-4 border-r border-zinc-800/50">
+                        <div className="font-bold text-white text-base">{item.servicoNome}</div>
+                        <div className="text-xs text-zinc-500 mt-0.5">Preço base: {fmt(item.precoBase)}</div>
+                      </td>
+                      <td className="p-4 border-r border-zinc-800/50 text-center">
+                        <span className="freq-badge inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold bg-[#E4B77D]/10 text-[#E4B77D] border border-[#E4B77D]/20">
+                          {item.frequencia}x
+                        </span>
+                      </td>
+                      <td className="p-4 border-r border-zinc-800/50 col-volume">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-zinc-800 rounded-full h-2 overflow-hidden">
+                            <div className="h-full bg-[#E4B77D] rounded-full transition-all duration-500"
+                              style={{ width: `${(Number(item.frequencia) / maxFreq) * 100}%` }} />
+                          </div>
+                          <span className="text-xs text-zinc-500 w-8 text-right">
+                            {Math.round((Number(item.frequencia) / maxFreq) * 100)}%
+                          </span>
                         </div>
                       </td>
+                      <td className="p-4 text-right font-mono">
+                        <div className="text-green-400 font-bold text-base">{fmt(item.receitaTotal)}</div>
+                      </td>
+                      <td className="p-4 text-center col-detalhe">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+                          viewBox="0 0 24 24" stroke="currentColor"
+                          className={`mx-auto text-[#E4B77D] transition-transform duration-200 ${
+                            expandido === item.servicoId ? "rotate-180" : ""}`}>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
 
-            </tbody>
-          </table>
-        </div>
-      </main>
+                    {expandido === item.servicoId && (
+                      <tr className="detalhe-row">
+                        <td colSpan={6} className="p-0">
+                          <div className="bg-zinc-950 border-l-4 border-[#E4B77D] px-6 py-4">
+                            <p className="text-xs font-bold text-[#E4B77D] uppercase tracking-widest mb-3">
+                              Detalhamento por Profissional — {item.servicoNome}
+                            </p>
+                            {loadingDetalhe && !detalhes[item.servicoId] ? (
+                              <p className="text-zinc-500 text-sm">Carregando...</p>
+                            ) : (detalhes[item.servicoId] || []).length === 0 ? (
+                              <p className="text-zinc-500 text-sm italic">Sem dados para este serviço.</p>
+                            ) : (
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="text-zinc-500 text-xs uppercase tracking-widest border-b border-zinc-800">
+                                    <th className="py-2 text-left font-bold">Profissional</th>
+                                    <th className="py-2 text-center font-bold w-32">Execuções</th>
+                                    <th className="py-2 text-right font-bold w-40">Receita</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-800/50">
+                                  {(detalhes[item.servicoId] || []).map((d: any) => (
+                                    <tr key={d.profissionalId} className="hover:bg-zinc-900/50">
+                                      <td className="py-2.5 font-medium text-white">{d.profissionalNome}</td>
+                                      <td className="py-2.5 text-center">
+                                        <span className="px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-300 text-xs font-bold">
+                                          {d.frequencia}x
+                                        </span>
+                                      </td>
+                                      <td className="py-2.5 text-right text-green-400 font-mono font-bold">
+                                        {fmt(d.receitaTotal)}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
 
-    </div>
+              </tbody>
+            </table>
+          </div>
+        </main>
+
+      </div>
+    </>
   );
 }

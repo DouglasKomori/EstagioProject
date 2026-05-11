@@ -2974,11 +2974,17 @@
           "200": {
             "description": "OK"
           },
+          "400": {
+            "description": "Bad Request"
+          },
           "401": {
             "description": "Unauthorized"
           },
           "403": {
             "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
           },
           "500": {
             "description": "Internal Server Error"
@@ -3452,12 +3458,12 @@
         ]
       }
     },
-    "/caixas/historico": {
+    "/caixas/movimentacoes": {
       "get": {
         "tags": [
           "Caixa - FUNCIONARIO"
         ],
-        "summary": "Lista os últimos 30 caixas fechados, com detalhes de faturamento e datas",
+        "summary": "Lista todas as movimentações (serviços e produtos) do caixa aberto em tempo real",
         "description": "",
         "parameters": [
           {
@@ -3471,6 +3477,101 @@
         "responses": {
           "200": {
             "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/caixas/historico": {
+      "get": {
+        "tags": [
+          "Caixa - FUNCIONARIO"
+        ],
+        "summary": "Lista os caixas fechados. Use ?limite=3 para restringir a quantidade (padrão: 30)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/caixas/historico/{id}/detalhes": {
+      "get": {
+        "tags": [
+          "Caixa - FUNCIONARIO"
+        ],
+        "summary": "Retorna o detalhamento de um caixa fechado: serviços realizados e produtos vendidos",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
           },
           "401": {
             "description": "Unauthorized"

@@ -385,7 +385,7 @@ export default function GerenciarProdutos() {
                             className="text-sm text-emerald-500 hover:text-emerald-400 transition-colors font-bold tracking-wide"
                             title="Ajustar Estoque"
                           >
-                            + Estoque
+                            + Acerto
                           </button>
                         )}
                         

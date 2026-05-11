@@ -40,6 +40,25 @@ export default class ComandaController {
             if (tipo === 'SERVICO') {
                 await this.#repo.adicionarServico({ comandaId, servicoId: idItem, profissionalId, valorCobrado: valor });
             } else {
+                
+                const repoProduto = new ProdutoRepository();
+                const produtoBanco = await repoProduto.consultarPorId(idItem);
+
+                if (!produtoBanco) {
+                    return res.status(404).json({ msg: "Produto não encontrado no cadastro." });
+                }
+
+                // Soma a quantidade que já está lançada nesta comanda para o mesmo produto
+                const qtdJaNaComanda = await this.#repo.quantidadeProdutoNaComanda(comandaId, idItem);
+                const qtdTotalDesejada = qtdJaNaComanda + Number(quantidade);
+
+                if (produtoBanco.quantidadeEstoque < qtdTotalDesejada) {
+                    const disponivel = produtoBanco.quantidadeEstoque - qtdJaNaComanda;
+                    return res.status(400).json({ 
+                        msg: `Estoque insuficiente para "${produtoBanco.nome}". Disponível: ${disponivel >= 0 ? disponivel : 0} un. (Estoque: ${produtoBanco.quantidadeEstoque}, já na ficha: ${qtdJaNaComanda}).`
+                    });
+                }
+
                 await this.#repo.adicionarProduto({ comandaId, produtoId: idItem, quantidade, valorCobrado: valor });
             }
 
@@ -77,6 +96,7 @@ export default class ComandaController {
                 return res.status(404).json({ msg: "Comanda não encontrada." });
             }
 
+            // Validação de estoque antes de finalizar (segurança extra)
             if (detalhes.produtos && detalhes.produtos.length > 0) {
                 const repoProduto = new ProdutoRepository();
 

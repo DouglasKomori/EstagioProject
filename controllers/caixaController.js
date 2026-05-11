@@ -78,7 +78,6 @@ export default class CaixaController {
             const caixa = await this.#repo.buscarCaixaAberto();
             if (!caixa) return res.status(400).json({ msg: "Não há caixa aberto." });
 
-            // Calculando o faturamento final pelo ID do caixa
             const faturamento = await this.#repo.calcularFaturamento(caixa.id);
             const saldoFinalEsperado = Number(caixa.saldoInicial) + Number(faturamento);
 
@@ -94,11 +93,42 @@ export default class CaixaController {
 
     async historico(req, res) {
         try {
-            const lista = await this.#repo.listarHistorico();
+            const limite = parseInt(req.query.limite) || 30;
+            const lista = await this.#repo.listarHistorico(limite);
             return res.status(200).json(lista);
         } catch (exception) {
             console.error(exception);
             return res.status(500).json({ msg: "Erro ao buscar histórico de caixas." });
+        }
+    }
+
+    async movimentacoes(req, res) {
+        try {
+            const caixa = await this.#repo.buscarCaixaAberto();
+            if (!caixa) {
+                return res.status(400).json({ msg: "Não há caixa aberto no momento." });
+            }
+
+            const lista = await this.#repo.listarMovimentacoes(caixa.id);
+            return res.status(200).json(lista);
+        } catch (exception) {
+            console.error(exception);
+            return res.status(500).json({ msg: "Erro ao buscar movimentações do caixa." });
+        }
+    }
+
+    async historicoDetalhes(req, res) {
+        try {
+            const caixaId = parseInt(req.params.id);
+            if (!caixaId || isNaN(caixaId)) {
+                return res.status(400).json({ msg: "ID do caixa inválido." });
+            }
+
+            const detalhes = await this.#repo.buscarDetalhesHistorico(caixaId);
+            return res.status(200).json(detalhes);
+        } catch (exception) {
+            console.error(exception);
+            return res.status(500).json({ msg: "Erro ao buscar detalhes do histórico." });
         }
     }
 }

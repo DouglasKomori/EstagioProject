@@ -27,10 +27,43 @@ export default class ComandaRepository {
     }
 
     async adicionarProduto(item) {
-        let sql = `INSERT INTO comanda_produto (comandaId, produtoId, quantidade, valorCobrado) 
-                   VALUES (?, ?, ?, ?)`;
-        let params = [item.comandaId, item.produtoId, item.quantidade, item.valorCobrado];
-        return await this.#banco.ExecutaComandoNonQuery(sql, params);
+        // Verifica se o produto já existe nesta comanda
+        let sqlExiste = `
+            SELECT id, quantidade FROM comanda_produto 
+            WHERE comandaId = ? AND produtoId = ?
+        `;
+        let existe = await this.#banco.ExecutaComando(sqlExiste, [item.comandaId, item.produtoId]);
+
+        if (existe.length > 0) {
+            // Produto já na ficha, soma a quantidade e atualiza o valor unitário
+            let sqlUpdate = `
+                UPDATE comanda_produto 
+                SET quantidade = quantidade + ?, valorCobrado = ?
+                WHERE id = ?
+            `;
+            return await this.#banco.ExecutaComandoNonQuery(sqlUpdate, [
+                item.quantidade, item.valorCobrado, existe[0].id
+            ]);
+        } else {
+            // Produto novo na ficha, insere normalmente
+            let sqlInsert = `
+                INSERT INTO comanda_produto (comandaId, produtoId, quantidade, valorCobrado) 
+                VALUES (?, ?, ?, ?)
+            `;
+            return await this.#banco.ExecutaComandoNonQuery(sqlInsert, [
+                item.comandaId, item.produtoId, item.quantidade, item.valorCobrado
+            ]);
+        }
+    }
+
+    async quantidadeProdutoNaComanda(comandaId, produtoId) {
+        let sql = `
+            SELECT COALESCE(SUM(quantidade), 0) AS total
+            FROM comanda_produto
+            WHERE comandaId = ? AND produtoId = ?
+        `;
+        let rows = await this.#banco.ExecutaComando(sql, [comandaId, produtoId]);
+        return Number(rows[0].total);
     }
 
     async consultarDetalhes(idComanda) {
@@ -43,7 +76,6 @@ export default class ComandaRepository {
 
         if (header.length === 0) return null;
 
-
         let sqlServicos = `
             SELECT cs.*, s.nome as servicoNome, p.nome as profissionalNome 
             FROM comanda_servico cs
@@ -51,7 +83,6 @@ export default class ComandaRepository {
             INNER JOIN pessoa p ON cs.profissionalId = p.id
             WHERE cs.comandaId = ?`;
         let servicos = await this.#banco.ExecutaComando(sqlServicos, [idComanda]);
-
 
         let sqlProdutos = `
             SELECT cp.*, pr.nome as produtoNome 

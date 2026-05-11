@@ -42,13 +42,31 @@ router.put("/fechar", auth.validarFuncionario, (req,res) => {
     ctrl.fechar(req,res);
 });
 
+router.get("/movimentacoes", auth.validarFuncionario, (req,res) => {
+    /* #swagger.security = [{
+    "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Caixa - FUNCIONARIO']
+    // #swagger.summary = "Lista todas as movimentações (serviços e produtos) do caixa aberto em tempo real"
+    ctrl.movimentacoes(req,res);
+});
+
 router.get("/historico", auth.validarFuncionario, (req,res) => {
     /* #swagger.security = [{
     "bearerAuth": []
     }] */
     // #swagger.tags = ['Caixa - FUNCIONARIO']
-    // #swagger.summary = "Lista os últimos 30 caixas fechados, com detalhes de faturamento e datas"
+    // #swagger.summary = "Lista os caixas fechados. Use ?limite=3 para restringir a quantidade (padrão: 30)"
     ctrl.historico(req,res);
+});
+
+router.get("/historico/:id/detalhes", auth.validarFuncionario, (req,res) => {
+    /* #swagger.security = [{
+    "bearerAuth": []
+    }] */
+    // #swagger.tags = ['Caixa - FUNCIONARIO']
+    // #swagger.summary = "Retorna o detalhamento de um caixa fechado: serviços realizados e produtos vendidos"
+    ctrl.historicoDetalhes(req,res);
 });
 
 export default router;

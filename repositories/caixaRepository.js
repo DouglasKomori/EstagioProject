@@ -44,7 +44,7 @@ export default class CaixaRepository {
         return await this.#banco.ExecutaComandoNonQuery(sql, [saldoFinalCalculado, idCaixa]);
     }
 
-    async listarHistorico() {
+    async listarHistorico(limite = 30) {
         let sql = `
             SELECT 
                 id, 
@@ -56,8 +56,94 @@ export default class CaixaRepository {
             FROM caixa 
             WHERE status = 'FECHADO' 
             ORDER BY dataFechamento DESC 
-            LIMIT 30
+            LIMIT ?
         `;
-        return await this.#banco.ExecutaComando(sql);
+        return await this.#banco.ExecutaComando(sql, [limite]);
+    }
+
+    async listarMovimentacoes(caixaId) {
+        // Serviços realizados nas comandas deste caixa
+        let sqlServicos = `
+            SELECT 
+                cs.id                                       AS id,
+                'servico'                                   AS tipo,
+                s.nome                                      AS descricao,
+                p.nome                                      AS profissional,
+                cli.nome                                    AS cliente,
+                1                                           AS quantidade,
+                cs.valorCobrado                             AS valor,
+                COALESCE(c.dataFechamento, c.dataAbertura)  AS dataHora
+            FROM comanda_servico cs
+            INNER JOIN comanda c      ON cs.comandaId = c.id
+            INNER JOIN servico s      ON cs.servicoId = s.id
+            LEFT  JOIN pessoa p       ON cs.profissionalId = p.id
+            LEFT  JOIN cliente cli    ON c.clienteId = cli.id
+            WHERE c.caixaId = ?
+        `;
+
+        // Produtos vendidos nas comandas deste caixa
+        let sqlProdutos = `
+            SELECT 
+                cp.id                                       AS id,
+                'produto'                                   AS tipo,
+                prod.nome                                   AS descricao,
+                NULL                                        AS profissional,
+                cli.nome                                    AS cliente,
+                cp.quantidade                               AS quantidade,
+                (cp.valorCobrado * cp.quantidade)           AS valor,
+                COALESCE(c.dataFechamento, c.dataAbertura)  AS dataHora
+            FROM comanda_produto cp
+            INNER JOIN comanda c      ON cp.comandaId = c.id
+            INNER JOIN produto prod   ON cp.produtoId = prod.id
+            LEFT  JOIN cliente cli    ON c.clienteId = cli.id
+            WHERE c.caixaId = ?
+        `;
+
+        const servicos = await this.#banco.ExecutaComando(sqlServicos, [caixaId]);
+        const produtos = await this.#banco.ExecutaComando(sqlProdutos, [caixaId]);
+
+        // Junta e ordena por data/hora decrescente (mais recente primeiro)
+        const todas = [...servicos, ...produtos].sort(
+            (a, b) => new Date(b.dataHora) - new Date(a.dataHora)
+        );
+
+        return todas;
+    }
+
+    async buscarDetalhesHistorico(caixaId) {
+        // Serviços agrupados por nome + profissional
+        let sqlServicos = `
+            SELECT 
+                s.nome                          AS nome,
+                p.nome                          AS profissional,
+                COUNT(*)                        AS quantidade,
+                SUM(cs.valorCobrado)            AS valor
+            FROM comanda_servico cs
+            INNER JOIN comanda c      ON cs.comandaId = c.id
+            INNER JOIN servico s      ON cs.servicoId = s.id
+            LEFT  JOIN pessoa p       ON cs.profissionalId = p.id
+            WHERE c.caixaId = ?
+            GROUP BY s.id, p.id
+            ORDER BY quantidade DESC
+        `;
+
+        // Produtos agrupados por nome
+        let sqlProdutos = `
+            SELECT 
+                prod.nome                                   AS nome,
+                SUM(cp.quantidade)                          AS quantidade,
+                SUM(cp.valorCobrado * cp.quantidade)        AS valor
+            FROM comanda_produto cp
+            INNER JOIN comanda c      ON cp.comandaId = c.id
+            INNER JOIN produto prod   ON cp.produtoId = prod.id
+            WHERE c.caixaId = ?
+            GROUP BY prod.id
+            ORDER BY quantidade DESC
+        `;
+
+        const servicos = await this.#banco.ExecutaComando(sqlServicos, [caixaId]);
+        const produtos = await this.#banco.ExecutaComando(sqlProdutos, [caixaId]);
+
+        return { servicos, produtos };
     }
 }
