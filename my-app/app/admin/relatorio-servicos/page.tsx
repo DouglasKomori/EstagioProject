@@ -526,16 +526,21 @@ export default function RelatorioServicos() {
 
         {/* ── HEADER TELA ────────────────────────────────────── */}
         <header className="print-hide flex flex-col md:flex-row md:justify-between items-center mb-6 border-b border-zinc-900 pb-4 max-w-6xl mx-auto gap-4 md:gap-0">
-          <div>
-            <h1 className="text-2xl font-bold text-[#E4B77D] flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              Relatório de Serviços
-            </h1>
-            <p className="text-sm text-zinc-400 mt-1">Frequência e receita por serviço prestado.</p>
+          <div className="flex items-center gap-4">
+            <Link href="/admin" className="w-12 h-12 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 hover:text-[#E4B77D] transition-colors shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-[#E4B77D] flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Relatório de Serviços
+              </h1>
+              <p className="text-sm text-zinc-400 mt-1">Frequência e receita por serviço prestado.</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -549,11 +554,6 @@ export default function RelatorioServicos() {
               </svg>
               ? Ajuda
             </button>
-
-            <Link href="/admin"
-              className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-              Voltar
-            </Link>
 
             <button id="tour-imprimir" onClick={() => window.print()}
               className="px-6 py-2 bg-zinc-800 text-white font-bold rounded-md hover:bg-zinc-700

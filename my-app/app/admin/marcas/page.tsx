@@ -181,15 +181,17 @@ export default function GerenciarMarcas() {
     <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8 font-sans relative">
       
       <header className="flex justify-between items-center mb-6 border-b border-zinc-900 pb-4 max-w-6xl mx-auto">
-        <div>
-          <h1 className="text-2xl font-bold text-[#E4B77D]">Gerenciar Marcas</h1>
-          <p className="text-sm text-zinc-400 mt-1">Marcas de produtos comercializados ou utilizados</p>
+        <div className="flex items-center gap-4">
+          <Link href="/admin" className="w-12 h-12 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 hover:text-[#E4B77D] transition-colors shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-[#E4B77D]">Gerenciar Marcas</h1>
+            <p className="text-sm text-zinc-400 mt-1">Marcas de produtos comercializados ou utilizados</p>
+          </div>
         </div>
         <div className="flex gap-4 items-center">
-          <Link href="/admin" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-            Voltar
-          </Link>
-          <button 
+          <button
             onClick={abrirModalNovo}
             className="px-4 py-2 bg-[#E4B77D] text-black font-bold rounded-md hover:bg-[#cfa56d] transition-colors shadow-lg shadow-[#E4B77D]/10"
           >

@@ -430,17 +430,22 @@ export default function GestaoCaixa() {
 
       {/* ── HEADER ─────────────────────────────────────────── */}
       <header className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-white flex items-center gap-3">
-            <span className="p-2 bg-[#E4B77D]/10 rounded-lg text-[#E4B77D]">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </span>
-            Fluxo de Caixa
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">Movimentações em tempo real e controle de expediente.</p>
+        <div className="flex items-center gap-4">
+          <Link href="/admin" className="w-12 h-12 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 hover:text-[#E4B77D] transition-colors shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-black text-white flex items-center gap-3">
+              <span className="p-2 bg-[#E4B77D]/10 rounded-lg text-[#E4B77D]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </span>
+              Fluxo de Caixa
+            </h1>
+            <p className="text-zinc-400 text-sm mt-1">Movimentações em tempo real e controle de expediente.</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -476,9 +481,6 @@ export default function GestaoCaixa() {
             </svg>
           </button>
 
-          <Link href="/admin" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-            Voltar
-          </Link>
         </div>
       </header>
 

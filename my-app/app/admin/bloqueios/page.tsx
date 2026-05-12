@@ -200,19 +200,21 @@ export default function GerenciarBloqueios() {
     <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8 font-sans">
       
       <header className="flex justify-between items-center mb-6 border-b border-zinc-900 pb-4 max-w-6xl mx-auto">
-        <div>
-          <h1 className="text-2xl font-bold text-[#E4B77D] flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            Bloqueios de Agenda
-          </h1>
-          <p className="text-sm text-zinc-400 mt-1">Gerencie atestados, imprevistos e férias dos barbeiros</p>
+        <div className="flex items-center gap-4">
+          <Link href="/admin" className="w-12 h-12 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 hover:text-[#E4B77D] transition-colors shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-[#E4B77D] flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              Bloqueios de Agenda
+            </h1>
+            <p className="text-sm text-zinc-400 mt-1">Gerencie atestados, imprevistos e férias dos barbeiros</p>
+          </div>
         </div>
         <div className="flex gap-4 items-center">
-          <Link href="/admin" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
-            Voltar
-          </Link>
           <button onClick={abrirModalNovo} className="px-4 py-2 bg-red-950/80 text-red-400 border border-red-900 font-bold rounded-md hover:bg-red-900 hover:text-red-100 transition-colors shadow-lg flex items-center gap-2">
             + Bloquear Horário
           </button>
