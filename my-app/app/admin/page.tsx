@@ -6,24 +6,35 @@ import Link from "next/link";
 // TOUR
 // ═══════════════════════════════════════════════════════════════
 
-const TOUR_STEPS = [
+// 1. Defina o tipo explicitamente para aceitar as três direções
+type TourPosicao = "bottom" | "top" | "left";
+
+interface Step {
+  targetId: string;
+  titulo: string;
+  descricao: string;
+  posicao: TourPosicao;
+}
+
+// 2. Tipagem do array TOUR_STEPS
+const TOUR_STEPS: Step[] = [
   {
     targetId: "tour-operacao",
     titulo: "Operação Diária",
-    descricao: "Aqui ficam as principais ferramentas do dia a dia: Agenda, Comandas e Caixa. Use para gerenciar atendimentos e pagamentos em tempo real.",
-    posicao: "bottom" as const,
+    descricao: "Aqui ficam as principais ferramentas do dia a dia: Agenda, Comandas e Caixa.",
+    posicao: "bottom",
   },
   {
     targetId: "tour-cadastros",
     titulo: "Cadastros e Gestão",
-    descricao: "Gerencie clientes, equipe, serviços, produtos, marcas, escalas e bloqueios de agenda. Mantenha sempre os dados atualizados para o sistema funcionar corretamente.",
-    posicao: "bottom" as const,
+    descricao: "Gerencie clientes, equipe, serviços, produtos, marcas, escalas e bloqueios.",
+    posicao: "bottom",
   },
   {
     targetId: "tour-relatorios",
     titulo: "Relatórios",
-    descricao: "Acesse relatórios detalhados de atendimentos, giro de estoque e serviços mais vendidos. Ótimos para tomada de decisão e análise do negócio.",
-    posicao: "top" as const,
+    descricao: "Acesse relatórios detalhados de atendimentos, giro de estoque e serviços.",
+    posicao: "top",
   },
 ];
 
