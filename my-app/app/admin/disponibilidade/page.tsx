@@ -3,9 +3,28 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import ConfirmModal from "../../components/ConfirmModal";
 
-const TOUR_STEPS = [
-  { targetId: "tour-seletor-barb", titulo: "Selecione o Barbeiro", descricao: "Escolha o profissional cuja escala deseja configurar. Cada barbeiro tem a própria grade semanal de trabalho.", posicao: "bottom" as const },
-  { targetId: "tour-grade-semana", titulo: "Grade Semanal", descricao: "Cada card representa um dia da semana. Clique em '+ Adicionar Horário' para definir os turnos de trabalho. Se o barbeiro faz horário de almoço, crie dois turnos separados.", posicao: "top" as const },
+type TourPosicao = "bottom" | "top" | "left";
+
+interface TourStep {
+  targetId: string;
+  titulo: string;
+  descricao: string;
+  posicao: TourPosicao;
+}
+
+const TOUR_STEPS: TourStep[] = [
+  { 
+    targetId: "tour-seletor-barb", 
+    titulo: "Selecione o Barbeiro", 
+    descricao: "Escolha o profissional cuja escala deseja configurar. Cada barbeiro tem a própria grade semanal de trabalho.", 
+    posicao: "bottom" 
+  },
+  { 
+    targetId: "tour-grade-semana", 
+    titulo: "Grade Semanal", 
+    descricao: "Cada card representa um dia da semana. Clique em '+ Adicionar Horário' para definir os turnos de trabalho. Se o barbeiro faz horário de almoço, crie dois turnos separados.", 
+    posicao: "top" 
+  },
 ];
 
 function useSpotlight(targetId: string | null) {
