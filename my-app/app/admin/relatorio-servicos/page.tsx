@@ -123,7 +123,7 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
 
   if (step.posicao === "bottom") {
     balaoStyle = {
-      top:  spotY + spotH + BALAO_OFFSET,
+      top:  Math.min(spotY + spotH + BALAO_OFFSET, window.innerHeight - 190),
       left: Math.min(
         Math.max(spotX + spotW / 2 - BALAO_W / 2, 12),
         window.innerWidth - BALAO_W - 12
@@ -132,7 +132,7 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
     };
   } else if (step.posicao === "top") {
     balaoStyle = {
-      bottom: window.innerHeight - spotY + BALAO_OFFSET,
+      bottom: Math.min(window.innerHeight - spotY + BALAO_OFFSET, window.innerHeight - 190),
       left: Math.min(
         Math.max(spotX + spotW / 2 - BALAO_W / 2, 12),
         window.innerWidth - BALAO_W - 12

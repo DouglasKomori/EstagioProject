@@ -1,12 +1,67 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import ConfirmModal from "../components/ConfirmModal"; // Ajuste os ../ se necessário
+import ConfirmModal from "../components/ConfirmModal";
+
+const TOUR_STEPS = [
+  { targetId: "tour-meus-horarios", titulo: "Meus Agendamentos", descricao: "Aqui ficam todos os seus próximos horários marcados. Você pode cancelar um agendamento com até 2 horas de antecedência.", posicao: "bottom" as const },
+  { targetId: "tour-barbeiro", titulo: "Escolha o Barbeiro", descricao: "Selecione com qual profissional deseja se atender. Ao escolher o barbeiro, os horários disponíveis são carregados automaticamente.", posicao: "bottom" as const },
+  { targetId: "tour-servicos", titulo: "Escolha os Serviços", descricao: "Selecione um ou mais serviços que deseja realizar. O valor total e o tempo estimado são calculados automaticamente.", posicao: "bottom" as const },
+  { targetId: "tour-dia", titulo: "Escolha o Dia", descricao: "Navegue pelo calendário e clique no dia desejado. Dias passados ficam desabilitados. O barbeiro precisa estar selecionado para ver os horários.", posicao: "bottom" as const },
+  { targetId: "tour-horario", titulo: "Escolha o Horário", descricao: "Selecione um horário disponível. Horários riscados já estão ocupados ou são do passado. Os slots são gerados a partir da escala de trabalho do barbeiro.", posicao: "top" as const },
+  { targetId: "tour-resumo", titulo: "Confirmar Agendamento", descricao: "Veja o resumo com o valor total e o tempo estimado. Quando tudo estiver preenchido, clique em 'Confirmar Agendamento' para finalizar.", posicao: "top" as const },
+];
+
+function useSpotlight(targetId: string | null) {
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  useEffect(() => {
+    if (!targetId) { setRect(null); return; }
+    const atualizar = () => { const el = document.getElementById(targetId); if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => setRect(el.getBoundingClientRect()), 350); } };
+    atualizar(); window.addEventListener("resize", atualizar); return () => window.removeEventListener("resize", atualizar);
+  }, [targetId]);
+  return rect;
+}
+
+interface TourProps { passo: number; onProximo: () => void; onAnterior: () => void; onFechar: () => void; entrando: boolean; }
+function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
+  const step = TOUR_STEPS[passo]; const rect = useSpotlight(step.targetId); const isUltimo = passo === TOUR_STEPS.length - 1; const PAD = 10;
+  if (!rect) return null;
+  const spotX = rect.left - PAD, spotY = rect.top - PAD, spotW = rect.width + PAD * 2, spotH = rect.height + PAD * 2;
+  const BALAO_W = 300, OFFSET = 16; let balaoStyle: React.CSSProperties = {};
+  if (step.posicao === "bottom") balaoStyle = { top: Math.min(spotY + spotH + OFFSET, window.innerHeight - 190), left: Math.min(Math.max(spotX + spotW / 2 - BALAO_W / 2, 12), window.innerWidth - BALAO_W - 12), width: BALAO_W };
+  else if (step.posicao === "top") balaoStyle = { bottom: Math.min(window.innerHeight - spotY + OFFSET, window.innerHeight - 190), left: Math.min(Math.max(spotX + spotW / 2 - BALAO_W / 2, 12), window.innerWidth - BALAO_W - 12), width: BALAO_W };
+  else if (step.posicao === "left") balaoStyle = { top: Math.max(spotY + spotH / 2 - 90, 12), right: window.innerWidth - spotX + OFFSET, width: BALAO_W };
+  return (
+    <>
+      <div className="fixed inset-0 z-40 pointer-events-none"><svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><defs><mask id="spotlight-mask"><rect width="100%" height="100%" fill="white" /><rect x={spotX} y={spotY} width={spotW} height={spotH} rx="8" ry="8" fill="black" /></mask></defs><rect width="100%" height="100%" fill="rgba(0,0,0,0.78)" mask="url(#spotlight-mask)" /><rect x={spotX} y={spotY} width={spotW} height={spotH} rx="8" ry="8" fill="none" stroke="#E4B77D" strokeWidth="2" strokeDasharray="6 3"><animate attributeName="stroke-dashoffset" from="0" to="18" dur="1s" repeatCount="indefinite" /></rect></svg></div>
+      <div className="fixed inset-0 z-40" onClick={onFechar} />
+      <div className="fixed z-50 pointer-events-auto" style={{ ...balaoStyle, animation: entrando ? "tourBalloonIn 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards" : undefined }} onClick={(e) => e.stopPropagation()}>
+        <div className="bg-zinc-900 border border-[#E4B77D]/40 rounded-xl shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2"><span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{passo + 1} de {TOUR_STEPS.length}</span><button onClick={onFechar} className="text-zinc-600 hover:text-zinc-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+          <div className="mx-4 h-1 bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-[#E4B77D] rounded-full transition-all duration-500" style={{ width: `${((passo + 1) / TOUR_STEPS.length) * 100}%` }} /></div>
+          <div className="px-4 py-4"><h3 className="text-sm font-bold text-[#E4B77D] mb-1">{step.titulo}</h3><p className="text-xs text-zinc-400 leading-relaxed">{step.descricao}</p></div>
+          <div className="flex items-center justify-between px-4 pb-4 gap-2">
+            <button onClick={onAnterior} disabled={passo === 0} className="px-3 py-1.5 rounded-md border border-zinc-700 text-zinc-400 text-xs font-bold hover:border-zinc-500 hover:text-white transition-colors disabled:opacity-25 disabled:cursor-not-allowed">← Anterior</button>
+            <div className="flex gap-1">{TOUR_STEPS.map((_, i) => (<div key={i} className={`rounded-full transition-all duration-300 ${i === passo ? "w-4 h-1.5 bg-[#E4B77D]" : "w-1.5 h-1.5 bg-zinc-700"}`} />))}</div>
+            {isUltimo ? <button onClick={onFechar} className="px-3 py-1.5 rounded-md bg-[#E4B77D] text-black text-xs font-bold hover:bg-[#cfa56d] transition-colors">Concluir ✓</button> : <button onClick={onProximo} className="px-3 py-1.5 rounded-md bg-[#E4B77D] text-black text-xs font-bold hover:bg-[#cfa56d] transition-colors">Próximo →</button>}
+          </div>
+        </div>
+      </div>
+      <style>{`@keyframes tourBalloonIn { 0% { opacity:0; transform:scale(0.85) translateY(6px); } 100% { opacity:1; transform:scale(1) translateY(0); } }`}</style>
+    </>
+  );
+}
 
 export default function AgendamentoCliente() {
   const router = useRouter();
-  
+
+  const [tourAtivo, setTourAtivo] = useState(false);
+  const [tourPasso, setTourPasso] = useState(0);
+  const [tourEntrando, setTourEntrando] = useState(false);
+  const iniciarTour = () => { setTourPasso(0); setTourEntrando(true); setTourAtivo(true); setTimeout(() => setTourEntrando(false), 350); };
+  const irParaPasso = useCallback((novo: number) => { setTourEntrando(true); setTimeout(() => { setTourPasso(novo); setTimeout(() => setTourEntrando(false), 50); }, 150); }, []);
+
   // Estados de Dados
   const [meusAgendamentos, setMeusAgendamentos] = useState<any[]>([]);
   const [listaProfissionais, setListaProfissionais] = useState<any[]>([]);
@@ -302,7 +357,8 @@ export default function AgendamentoCliente() {
 
   return (
     <div className="min-h-screen bg-black text-white p-4 md:p-8 font-sans">
-      
+      {tourAtivo && (<Tour passo={tourPasso} entrando={tourEntrando} onProximo={() => irParaPasso(tourPasso + 1)} onAnterior={() => irParaPasso(tourPasso - 1)} onFechar={() => setTourAtivo(false)} />)}
+
       <header className="flex justify-between items-center max-w-7xl mx-auto mb-10 border-b border-zinc-900 pb-6">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">
@@ -310,9 +366,15 @@ export default function AgendamentoCliente() {
           </h1>
           <p className="text-zinc-400 mt-1">Gerencie seus horários na barbearia.</p>
         </div>
-        <Link href="/" className="px-5 py-2 text-sm font-medium text-zinc-300 bg-zinc-900 border border-zinc-800 rounded-md hover:text-white hover:bg-zinc-800 transition-colors">
-          Voltar para Home
-        </Link>
+        <div className="flex items-center gap-3">
+          <button onClick={iniciarTour} className="px-4 py-2 bg-zinc-900 text-[#E4B77D] font-bold rounded-md hover:bg-zinc-800 transition-all border border-[#E4B77D]/30 hover:border-[#E4B77D]/70 flex items-center gap-2 text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            ? Ajuda
+          </button>
+          <Link href="/" className="px-5 py-2 text-sm font-medium text-zinc-300 bg-zinc-900 border border-zinc-800 rounded-md hover:text-white hover:bg-zinc-800 transition-colors">
+            Voltar para Home
+          </Link>
+        </div>
       </header>
 
       {/* FEEDBACKS VISUAIS */}
@@ -336,7 +398,7 @@ export default function AgendamentoCliente() {
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10">
         
-        <section className="lg:col-span-5 flex flex-col gap-6">
+        <section id="tour-meus-horarios" className="lg:col-span-5 flex flex-col gap-6">
           <h2 className="text-xl font-bold flex items-center gap-2 border-b border-zinc-900 pb-3">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-[#E4B77D]"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             Meus Próximos Horários
@@ -407,7 +469,7 @@ export default function AgendamentoCliente() {
               {erroForm && <div className="bg-red-950/40 border border-red-900 text-red-400 p-3 rounded-lg text-sm">{erroForm}</div>}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+                <div id="tour-barbeiro">
                   <label className="block text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">1. Escolha o Barbeiro</label>
                   <select 
                     value={profissionalSelecionado} onChange={(e) => setProfissionalSelecionado(e.target.value)}
@@ -418,7 +480,7 @@ export default function AgendamentoCliente() {
                   </select>
                 </div>
 
-                <div>
+                <div id="tour-servicos">
                   <label className="block text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">2. Escolha os Serviços</label>
                   <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 max-h-40 overflow-y-auto custom-scrollbar flex flex-col gap-2">
                     {listaServicos.map(serv => (
@@ -440,7 +502,7 @@ export default function AgendamentoCliente() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-zinc-900 pt-6">
-                <div>
+                <div id="tour-dia">
                   <label className="block text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">3. Escolha o Dia</label>
                   <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
                     <div className="flex justify-between items-center mb-4">
@@ -455,7 +517,7 @@ export default function AgendamentoCliente() {
                   </div>
                 </div>
 
-                <div>
+                <div id="tour-horario">
                   <label className="block text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">4. Escolha o Horário</label>
                   
                   {!profissionalSelecionado ? (
@@ -507,7 +569,7 @@ export default function AgendamentoCliente() {
                 </div>
               </div>
 
-              <div className="bg-zinc-900/50 border border-[#E4B77D]/30 rounded-xl p-5 mt-2 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div id="tour-resumo" className="bg-zinc-900/50 border border-[#E4B77D]/30 rounded-xl p-5 mt-2 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="flex flex-col gap-1 w-full sm:w-auto">
                   <span className="text-zinc-400 text-sm">Resumo do Agendamento:</span>
                   <div className="flex items-baseline gap-3">

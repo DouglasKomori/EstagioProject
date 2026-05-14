@@ -125,13 +125,13 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
 
   if (step.posicao === "bottom") {
     balaoStyle = {
-      top:  spotY + spotH + OFFSET,
+      top:  Math.min(spotY + spotH + OFFSET, window.innerHeight - 190),
       left: Math.min(Math.max(spotX + spotW / 2 - BALAO_W / 2, 12), window.innerWidth - BALAO_W - 12),
       width: BALAO_W,
     };
   } else if (step.posicao === "top") {
     balaoStyle = {
-      bottom: window.innerHeight - spotY + OFFSET,
+      bottom: Math.min(window.innerHeight - spotY + OFFSET, window.innerHeight - 190),
       left: Math.min(Math.max(spotX + spotW / 2 - BALAO_W / 2, 12), window.innerWidth - BALAO_W - 12),
       width: BALAO_W,
     };
