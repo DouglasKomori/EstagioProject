@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmModal from "../components/ConfirmModal";
 
-const TOUR_STEPS = [
-  { targetId: "tour-meus-horarios", titulo: "Meus Agendamentos", descricao: "Aqui ficam todos os seus próximos horários marcados. Você pode cancelar um agendamento com até 2 horas de antecedência.", posicao: "bottom" as const },
-  { targetId: "tour-barbeiro", titulo: "Escolha o Barbeiro", descricao: "Selecione com qual profissional deseja se atender. Ao escolher o barbeiro, os horários disponíveis são carregados automaticamente.", posicao: "bottom" as const },
-  { targetId: "tour-servicos", titulo: "Escolha os Serviços", descricao: "Selecione um ou mais serviços que deseja realizar. O valor total e o tempo estimado são calculados automaticamente.", posicao: "bottom" as const },
-  { targetId: "tour-dia", titulo: "Escolha o Dia", descricao: "Navegue pelo calendário e clique no dia desejado. Dias passados ficam desabilitados. O barbeiro precisa estar selecionado para ver os horários.", posicao: "bottom" as const },
-  { targetId: "tour-horario", titulo: "Escolha o Horário", descricao: "Selecione um horário disponível. Horários riscados já estão ocupados ou são do passado. Os slots são gerados a partir da escala de trabalho do barbeiro.", posicao: "top" as const },
-  { targetId: "tour-resumo", titulo: "Confirmar Agendamento", descricao: "Veja o resumo com o valor total e o tempo estimado. Quando tudo estiver preenchido, clique em 'Confirmar Agendamento' para finalizar.", posicao: "top" as const },
+type TourPosicao = "bottom" | "top" | "left";
+const TOUR_STEPS: { targetId: string; titulo: string; descricao: string; posicao: TourPosicao }[] = [
+  { targetId: "tour-meus-horarios", titulo: "Meus Agendamentos", descricao: "Aqui ficam todos os seus próximos horários marcados. Você pode cancelar um agendamento com até 2 horas de antecedência.", posicao: "bottom" },
+  { targetId: "tour-barbeiro", titulo: "Escolha o Barbeiro", descricao: "Selecione com qual profissional deseja se atender. Ao escolher o barbeiro, os horários disponíveis são carregados automaticamente.", posicao: "bottom" },
+  { targetId: "tour-servicos", titulo: "Escolha os Serviços", descricao: "Selecione um ou mais serviços que deseja realizar. O valor total e o tempo estimado são calculados automaticamente.", posicao: "bottom" },
+  { targetId: "tour-dia", titulo: "Escolha o Dia", descricao: "Navegue pelo calendário e clique no dia desejado. Dias passados ficam desabilitados. O barbeiro precisa estar selecionado para ver os horários.", posicao: "bottom" },
+  { targetId: "tour-horario", titulo: "Escolha o Horário", descricao: "Selecione um horário disponível. Horários riscados já estão ocupados ou são do passado. Os slots são gerados a partir da escala de trabalho do barbeiro.", posicao: "top" },
+  { targetId: "tour-resumo", titulo: "Confirmar Agendamento", descricao: "Veja o resumo com o valor total e o tempo estimado. Quando tudo estiver preenchido, clique em 'Confirmar Agendamento' para finalizar.", posicao: "top" },
 ];
 
 function useSpotlight(targetId: string | null) {
