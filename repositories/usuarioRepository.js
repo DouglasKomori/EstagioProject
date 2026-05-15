@@ -76,6 +76,17 @@ export default class UsuarioRepository {
         return result;
     }
 
+    async buscarPorEmail(email) {
+        const sql = "SELECT * FROM cliente WHERE LOWER(email) = LOWER(?) AND ativo = 1";
+        const rows = await this.#banco.ExecutaComando(sql, [email]);
+        return rows.length > 0 ? this.toMap(rows[0]) : null;
+    }
+
+    async alterarSenhaByEmail(email, novaSenhaHash) {
+        const sql = "UPDATE cliente SET senha = ? WHERE LOWER(email) = LOWER(?) AND ativo = 1";
+        return await this.#banco.ExecutaComandoNonQuery(sql, [novaSenhaHash, email]);
+    }
+
     async excluir(id) {
         const sql = "update cliente set ativo = 0 where id = ?";
         const params = [parseInt(id)]; 

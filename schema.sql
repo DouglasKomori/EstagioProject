@@ -134,7 +134,16 @@ CREATE TABLE comanda_produto (
     valorCobrado DECIMAL(10,2)
 );
 
--- 10. MOVIMENTACAO DE ESTOQUE
+-- 10. CODIGO DE VERIFICACAO (redefinição de senha)
+CREATE TABLE codigo_verificacao (
+    id        SERIAL PRIMARY KEY,
+    email     VARCHAR(100) NOT NULL,
+    codigo    VARCHAR(6) NOT NULL,
+    expiracao TIMESTAMP NOT NULL,
+    usado     SMALLINT NOT NULL DEFAULT 0
+);
+
+-- 11. MOVIMENTACAO DE ESTOQUE
 CREATE TABLE movimentacao_estoque (
     id               SERIAL PRIMARY KEY,
     produtoId        INT REFERENCES produto(id),
