@@ -19,6 +19,20 @@ function converterPlaceholders(sql) {
     return sql.replace(/\?/g, () => `$${++i}`);
 }
 
+function normalizarRow(row) {
+    return new Proxy(row, {
+        get(target, prop) {
+            if (typeof prop === 'string' && !(prop in target)) {
+                const lower = prop.toLowerCase();
+                for (const key of Object.keys(target)) {
+                    if (key.toLowerCase() === lower) return target[key];
+                }
+            }
+            return target[prop];
+        }
+    });
+}
+
 export default class Database {
     #transactionClient = null;
 
@@ -46,7 +60,7 @@ export default class Database {
         const sqlConvertido = converterPlaceholders(sql);
         const executor = this.#transactionClient || pool;
         const result = await executor.query(sqlConvertido, valores);
-        return result.rows;
+        return result.rows.map(normalizarRow);
     }
 
     async ExecutaComandoNonQuery(sql, valores = []) {

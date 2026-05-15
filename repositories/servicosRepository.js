@@ -24,7 +24,7 @@ export default class ServicosRepository {
             s.nome = row["nome"];
             s.descricao = row["descricao"];
             s.valor = row["valor"];
-            s.tempoEstimadoMinutos = row["tempoEstimadoMinutos"];
+            s.tempoEstimadoMinutos = row["tempoestimadominutos"] || row["tempoEstimadoMinutos"];
             s.excluido = row["excluido"];
             lista.push(s);
         }
@@ -76,7 +76,7 @@ export default class ServicosRepository {
             s.nome = row["nome"];
             s.descricao = row["descricao"];
             s.valor = row["valor"];
-            s.tempoEstimadoMinutos = row["tempoEstimadoMinutos"];
+            s.tempoEstimadoMinutos = row["tempoestimadominutos"] || row["tempoEstimadoMinutos"];
             s.excluido = row["excluido"];
             return s;
         }

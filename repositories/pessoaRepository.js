@@ -28,15 +28,15 @@ export default class PessoaRepository {
             let p = new Pessoa();
             p.id = row["id"];
             p.nome = row["nome"];
-            p.tipoPessoa = row["tipoPessoa"];
+            p.tipoPessoa = row["tipopessoa"] || row["tipoPessoa"];
             p.telefone = row["telefone"];
             p.email = row["email"];
             p.ativo = row["ativo"] === undefined ? true : (row["ativo"] === 1 || row["ativo"] === true);
-            
+
             p.cpf = row["cpf"] || "";
-            p.dataNascimento = row["dataNascimento"] || null;
+            p.dataNascimento = row["datanascimento"] || row["dataNascimento"] || null;
             p.cnpj = row["cnpj"] || "";
-            p.nomeFantasia = row["nomeFantasia"] || "";
+            p.nomeFantasia = row["nomefantasia"] || row["nomeFantasia"] || "";
 
             lista.push(p);
         }
@@ -54,7 +54,7 @@ export default class PessoaRepository {
             let p = new Pessoa();
             p.id = row["id"];
             p.nome = row["nome"];
-            p.tipoPessoa = row["tipoPessoa"];
+            p.tipoPessoa = row["tipopessoa"] || row["tipoPessoa"];
             p.telefone = row["telefone"];
             p.email = row["email"];
             p.ativo = row["ativo"];
@@ -142,14 +142,14 @@ export default class PessoaRepository {
             let p = new Pessoa();
             p.id = row["id"];
             p.nome = row["nome"];
-            p.tipoPessoa = row["tipoPessoa"];
+            p.tipoPessoa = row["tipopessoa"] || row["tipoPessoa"];
             p.telefone = row["telefone"];
             p.email = row["email"];
             p.ativo = row["ativo"];
             p.cpf = row["cpf"] || "";
-            p.dataNascimento = row["dataNascimento"] || null;
+            p.dataNascimento = row["datanascimento"] || row["dataNascimento"] || null;
             p.cnpj = row["cnpj"] || "";
-            p.nomeFantasia = row["nomeFantasia"] || "";
+            p.nomeFantasia = row["nomefantasia"] || row["nomeFantasia"] || "";
             return p;
         }
         return null;
