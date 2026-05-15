@@ -69,10 +69,7 @@ export default class PessoaRepository {
 
             let sqlPai = "INSERT INTO pessoa (nome, tipoPessoa, telefone, email, ativo) VALUES (?, ?, ?, ?, 1)";
             let paramsPai = [pessoa.nome, pessoa.tipoPessoa, pessoa.telefone, pessoa.email];
-            await this.#banco.ExecutaComandoNonQuery(sqlPai, paramsPai);
-
-            let lastIdRow = await this.#banco.ExecutaComando("SELECT LAST_INSERT_ID() as id");
-            let pessoaId = lastIdRow[0].id;
+            let pessoaId = await this.#banco.ExecutaComandoLastInserted(sqlPai, paramsPai);
 
             if (pessoa.tipoPessoa === 'PF') {
                 let sqlFilho = "INSERT INTO pessoa_fisica (pessoa_id, cpf, dataNascimento) VALUES (?, ?, ?)";

@@ -1,96 +1,66 @@
-import mysql from 'mysql2';
+import pkg from 'pg';
 import 'dotenv/config';
 
+const { Pool } = pkg;
+
+const pool = new Pool({
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT) || 5432,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    ssl: { rejectUnauthorized: false },
+    max: 10,
+    idleTimeoutMillis: 30000,
+});
+
+function converterPlaceholders(sql) {
+    let i = 0;
+    return sql.replace(/\?/g, () => `$${++i}`);
+}
+
 export default class Database {
+    #transactionClient = null;
 
-    #conexao;
-
-    get conexao() { return this.#conexao;} set conexao(conexao) { this.#conexao = conexao; }
-
-    constructor() {
-        this.#conexao = mysql.createPool({
-            host: process.env.DB_HOST || '127.0.0.1',
-            port: process.env.DB_PORT || 3306, 
-            database: process.env.DB_NAME || 'test', 
-            user: process.env.DB_USER || 'root', 
-            password: process.env.DB_PASSWORD || '',
-            idleTimeout: 30000,
-            connectionLimit: 50,
-            timezone: '-03:00',
-            dateStrings: true
-        });
+    async AbreTransacao() {
+        this.#transactionClient = await pool.connect();
+        await this.#transactionClient.query('BEGIN');
     }
 
-    AbreTransacao() {
-        var cnn = this.#conexao;
-        return new Promise(function(res, rej) {
-            cnn.query("START TRANSACTION", function (error, results, fields) {
-                if (error) 
-                    rej(error);
-                else
-                    res(results);
-            });
-        })
-    }
-    
-    Rollback() {
-        var cnn = this.#conexao;
-        return new Promise(function(res, rej) {
-            cnn.query("ROLLBACK", function (error, results, fields) {
-                if (error) 
-                    rej(error);
-                else
-                    res(results);
-            });
-        })
-    }
-    
-    Commit() {
-        var cnn = this.#conexao;
-        return new Promise(function(res, rej) {
-            cnn.query("COMMIT", function (error, results, fields) {
-                if (error) 
-                    rej(error);
-                else
-                    res(results);
-            });
-        })
+    async Commit() {
+        await this.#transactionClient.query('COMMIT');
+        this.#transactionClient.release();
+        this.#transactionClient = null;
     }
 
-    ExecutaComando(sql, valores) {
-        var cnn = this.#conexao;
-        return new Promise(function(res, rej) {
-            cnn.query(sql, valores, function (error, results, fields) {
-                if (error) 
-                    rej(error);
-                else 
-                    res(results);
-            });
-        })
-    }
-    
-    ExecutaComandoNonQuery(sql, valores) {
-        var cnn = this.#conexao;
-        return new Promise(function(res, rej) {
-            cnn.query(sql, valores, function (error, results, fields) {
-                if (error) 
-                    rej(error);
-                else 
-                    res(results.affectedRows > 0);
-            });
-        })
+    async Rollback() {
+        try {
+            await this.#transactionClient.query('ROLLBACK');
+        } finally {
+            this.#transactionClient.release();
+            this.#transactionClient = null;
+        }
     }
 
-    ExecutaComandoLastInserted(sql, valores) {
-        var cnn = this.#conexao;
-        return new Promise(function(res, rej) {
-            cnn.query(sql, valores, function (error, results, fields) {
-                if (error) 
-                    rej(error);
-                else 
-                    res(results.insertId);
-            });
-        })
+    async ExecutaComando(sql, valores = []) {
+        const sqlConvertido = converterPlaceholders(sql);
+        const executor = this.#transactionClient || pool;
+        const result = await executor.query(sqlConvertido, valores);
+        return result.rows;
     }
 
+    async ExecutaComandoNonQuery(sql, valores = []) {
+        const sqlConvertido = converterPlaceholders(sql);
+        const executor = this.#transactionClient || pool;
+        const result = await executor.query(sqlConvertido, valores);
+        return result.rowCount > 0;
+    }
+
+    async ExecutaComandoLastInserted(sql, valores = []) {
+        const sqlComReturning = sql.trimEnd().replace(/;$/, '') + ' RETURNING id';
+        const sqlConvertido = converterPlaceholders(sqlComReturning);
+        const executor = this.#transactionClient || pool;
+        const result = await executor.query(sqlConvertido, valores);
+        return result.rows[0].id;
+    }
 }
