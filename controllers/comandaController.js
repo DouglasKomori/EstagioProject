@@ -186,9 +186,9 @@ export default class ComandaController {
 
     async relatorio(req, res) {
         try {
-            let { dataInicio, dataFim, profissionalId } = req.query;
-            
-            let lista = await this.#repo.relatorioFaturamento(dataInicio, dataFim, profissionalId);
+            let { dataInicio, dataFim, profissionalId, tipo } = req.query;
+
+            let lista = await this.#repo.relatorioFaturamento(dataInicio, dataFim, profissionalId, tipo);
             return res.status(200).json(lista);
         } catch (exception) {
             console.error(exception);

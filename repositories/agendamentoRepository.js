@@ -105,7 +105,7 @@ export default class AgendamentoRepository {
                 c.nome AS clienteNome, 
                 c.telefone AS clienteTelefone,
                 p.nome AS profissionalNome,
-                string_agg(s.nome, ', ') AS servicos
+                string_agg(s.nome, ', ') AS nomesServicos
             FROM agendamento a
             INNER JOIN cliente c ON a.clienteId = c.id
             INNER JOIN pessoa p ON a.profissionalId = p.id

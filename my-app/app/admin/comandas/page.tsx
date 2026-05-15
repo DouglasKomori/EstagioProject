@@ -88,6 +88,7 @@ export default function GerenciarComandas() {
   const [relatorio, setRelatorio] = useState<any[]>([]);
   const [filtroPeriodo, setFiltroPeriodo] = useState("HOJE");
   const [filtroProfissional, setFiltroProfissional] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("");
 
   // Estados Modal Nova Comanda
   const [modalNovaAberto, setModalNovaAberto] = useState(false);
@@ -130,7 +131,7 @@ export default function GerenciarComandas() {
   useEffect(() => {
     if (abaAtual === "ABERTAS") carregarComandasAbertas();
     else if (abaAtual === "RELATORIO") carregarRelatorio();
-  }, [abaAtual, filtroPeriodo, filtroProfissional]);
+  }, [abaAtual, filtroPeriodo, filtroProfissional, filtroTipo]);
 
   // === FUNÇÕES DE TEMPORIZADOR DOS AVISOS ===
   const exibirSucesso = (mensagem: string) => {
@@ -197,7 +198,8 @@ export default function GerenciarComandas() {
 
     let url = `${process.env.NEXT_PUBLIC_API_URL}/comandas/relatorio/faturamento?`;
     if (dataInicio) url += `dataInicio=${dataInicio}&dataFim=${dataFim}&`;
-    if (filtroProfissional) url += `profissionalId=${filtroProfissional}`;
+    if (filtroProfissional) url += `profissionalId=${filtroProfissional}&`;
+    if (filtroTipo) url += `tipo=${filtroTipo}`;
 
     try {
       const res = await fetch(url, { headers: { "Authorization": `Bearer ${obterToken()}` } });
@@ -455,22 +457,39 @@ export default function GerenciarComandas() {
         <main className="max-w-6xl mx-auto flex flex-col gap-6 animate-in fade-in duration-300">
           
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-xl flex flex-col md:flex-row items-center gap-6 justify-between shadow-lg">
-            <div className="flex gap-4 w-full md:w-auto">
-              <select value={filtroPeriodo} onChange={e => setFiltroPeriodo(e.target.value)} className="bg-zinc-950 border border-zinc-800 text-white rounded-lg p-3 outline-none focus:border-[#E4B77D] w-full md:w-48">
+            <div className="flex flex-wrap gap-3 w-full md:w-auto">
+              <select value={filtroPeriodo} onChange={e => setFiltroPeriodo(e.target.value)} className="bg-zinc-950 border border-zinc-800 text-white rounded-lg p-3 outline-none focus:border-[#E4B77D] w-full md:w-44">
                 <option value="HOJE">Hoje</option>
                 <option value="7DIAS">Últimos 7 Dias</option>
                 <option value="30DIAS">Últimos 30 Dias</option>
                 <option value="TUDO">Todo o Período</option>
               </select>
-              
-              <select value={filtroProfissional} onChange={e => setFiltroProfissional(e.target.value)} className="bg-zinc-950 border border-zinc-800 text-white rounded-lg p-3 outline-none focus:border-[#E4B77D] w-full md:w-56">
+
+              <select
+                value={filtroTipo}
+                onChange={e => { setFiltroTipo(e.target.value); if (e.target.value === 'PRODUTO') setFiltroProfissional(""); }}
+                className="bg-zinc-950 border border-zinc-800 text-white rounded-lg p-3 outline-none focus:border-[#E4B77D] w-full md:w-44"
+              >
+                <option value="">Serviços + Produtos</option>
+                <option value="SERVICO">Apenas Serviços</option>
+                <option value="PRODUTO">Apenas Produtos</option>
+              </select>
+
+              <select
+                value={filtroProfissional}
+                onChange={e => setFiltroProfissional(e.target.value)}
+                disabled={filtroTipo === 'PRODUTO'}
+                className="bg-zinc-950 border border-zinc-800 text-white rounded-lg p-3 outline-none focus:border-[#E4B77D] w-full md:w-52 disabled:opacity-40"
+              >
                 <option value="">Todos os Barbeiros</option>
                 {profissionais.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </select>
             </div>
 
             <div className="text-right w-full md:w-auto bg-black/30 p-4 rounded-lg border border-zinc-800/50">
-              <span className="block text-xs font-bold tracking-widest text-zinc-500 uppercase mb-1">Faturamento (Serviços)</span>
+              <span className="block text-xs font-bold tracking-widest text-zinc-500 uppercase mb-1">
+                {filtroTipo === 'SERVICO' ? 'Total em Serviços' : filtroTipo === 'PRODUTO' ? 'Total em Produtos' : 'Faturamento Total'}
+              </span>
               <span className="text-3xl font-black text-[#E4B77D]">R$ {totalRelatorio.toFixed(2)}</span>
             </div>
           </div>
@@ -481,8 +500,8 @@ export default function GerenciarComandas() {
                 <tr className="bg-zinc-950 border-b border-zinc-800 text-xs tracking-widest uppercase text-zinc-500">
                   <th className="p-4 font-bold">Data/Hora</th>
                   <th className="p-4 font-bold">Comanda / Cliente</th>
-                  <th className="p-4 font-bold">Serviço Prestado</th>
-                  <th className="p-4 font-bold">Barbeiro</th>
+                  <th className="p-4 font-bold">Serviço / Produto</th>
+                  <th className="p-4 font-bold">Responsável</th>
                   <th className="p-4 font-bold text-right">Valor</th>
                 </tr>
               </thead>
@@ -492,9 +511,14 @@ export default function GerenciarComandas() {
                 ) : (
                   relatorio.map(item => (
                     <tr key={item.comandaId + item.servicoNome} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
-                      <td className="p-4 text-zinc-400">{new Date(item.dataFechamento).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' })}</td>
+                      <td className="p-4 text-zinc-400">{new Date(item.dataFechamento).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit', timeZone: 'UTC' })}</td>
                       <td className="p-4"><span className="text-[#E4B77D] font-bold mr-2">#{item.numero_comanda}</span> {item.clienteNome}</td>
-                      <td className="p-4 font-medium text-zinc-200">{item.servicoNome}</td>
+                      <td className="p-4 font-medium text-zinc-200 flex items-center gap-2">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${item.tipo === 'PRODUTO' ? 'bg-blue-900/50 text-blue-400' : 'bg-amber-900/40 text-amber-400'}`}>
+                          {item.tipo === 'PRODUTO' ? 'produto' : 'serviço'}
+                        </span>
+                        {item.servicoNome}
+                      </td>
                       <td className="p-4 text-zinc-400">{item.profissionalNome}</td>
                       <td className="p-4 text-right font-mono font-bold text-zinc-300">R$ {Number(item.valorCobrado).toFixed(2)}</td>
                     </tr>

@@ -632,7 +632,7 @@ export default function GestaoCaixa() {
             ) : (
               <div className="divide-y divide-zinc-800/50 max-h-[480px] overflow-y-auto">
                 {movimentacoes.map((mov: any, idx: number) => (
-                  <div key={mov.id || idx}
+                  <div key={`${mov.tipo}-${mov.id}-${idx}`}
                     className="flex items-center gap-4 px-5 py-4 hover:bg-zinc-800/20 transition-colors">
 
                     {/* Ícone */}

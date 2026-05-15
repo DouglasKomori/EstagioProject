@@ -34,6 +34,9 @@ const COLUNAS_CAMEL = {
     ticketmedio: 'ticketMedio', primeiraocorrencia: 'primeiraOcorrencia', ultimaocorrencia: 'ultimaOcorrencia',
     totalservicosdistintos: 'totalServicosDistintos', totalexecucoes: 'totalExecucoes',
     totalclientesatendidos: 'totalClientesAtendidos', precobase: 'precoBase',
+    totalservicos: 'totalServicos', totalprodutos: 'totalProdutos',
+    produtonome: 'produtoNome', marcanome: 'marcaNome', estoqueatual: 'estoqueAtual',
+    quantidadevendida: 'quantidadeVendida', faturamentototal: 'faturamentoTotal',
 };
 
 function normalizarRow(row) {

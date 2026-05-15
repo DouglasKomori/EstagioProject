@@ -129,65 +129,51 @@ export default class ComandaRepository {
         return await this.#banco.ExecutaComandoNonQuery(sql, [idComanda]);
     }
 
-    async relatorioFaturamento(dataInicio, dataFim, profissionalId) {
-        let sql = `
-            SELECT * FROM (
-                -- -----------------------------------------
-                -- PARTE 1: BUSCA OS SERVIÇOS
-                -- -----------------------------------------
-                SELECT
-                    c.id as comandaId,
-                    c.numero_comanda,
-                    c.dataFechamento,
-                    cli.nome as clienteNome,
-                    cs.valorCobrado as valorCobrado,
-                    s.nome as servicoNome,
-                    p.nome as profissionalNome,
-                    p.id as profissionalId
+    async relatorioFaturamento(dataInicio, dataFim, profissionalId, tipo) {
+        const partes = [];
+        const params = [];
+
+        const mostrarServicos = !tipo || tipo === 'SERVICO';
+        const mostrarProdutos = (!tipo || tipo === 'PRODUTO') && !profissionalId;
+
+        if (mostrarServicos) {
+            let cond = "c.status = 'PAGA'";
+            if (profissionalId) { cond += " AND p.id = ?"; params.push(profissionalId); }
+            if (dataInicio && dataFim) { cond += " AND DATE(c.dataFechamento) BETWEEN ? AND ?"; params.push(dataInicio, dataFim); }
+            partes.push(`
+                SELECT c.id as comandaId, c.numero_comanda, c.dataFechamento,
+                    cli.nome as clienteNome, cs.valorCobrado as valorCobrado,
+                    s.nome as servicoNome, p.nome as profissionalNome,
+                    p.id as profissionalId, 'SERVICO' as tipo
                 FROM comanda_servico cs
                 INNER JOIN comanda c ON cs.comandaId = c.id
                 INNER JOIN servico s ON cs.servicoId = s.id
                 INNER JOIN pessoa p ON cs.profissionalId = p.id
                 INNER JOIN cliente cli ON c.clienteId = cli.id
-                WHERE c.status = 'PAGA'
+                WHERE ${cond}
+            `);
+        }
 
-                UNION ALL
-
-                -- -----------------------------------------
-                -- PARTE 2: BUSCA OS PRODUTOS
-                -- -----------------------------------------
-                SELECT
-                    c.id as comandaId,
-                    c.numero_comanda,
-                    c.dataFechamento,
-                    cli.nome as clienteNome,
-                    (cp.valorCobrado * cp.quantidade) as valorCobrado,
+        if (mostrarProdutos) {
+            let cond = "c.status = 'PAGA'";
+            if (dataInicio && dataFim) { cond += " AND DATE(c.dataFechamento) BETWEEN ? AND ?"; params.push(dataInicio, dataFim); }
+            partes.push(`
+                SELECT c.id as comandaId, c.numero_comanda, c.dataFechamento,
+                    cli.nome as clienteNome, (cp.valorCobrado * cp.quantidade) as valorCobrado,
                     CONCAT(pr.nome, ' (', cp.quantidade, 'x)') as servicoNome,
                     'Balcão / Barbearia' as profissionalNome,
-                    NULL as profissionalId
+                    NULL as profissionalId, 'PRODUTO' as tipo
                 FROM comanda_produto cp
                 INNER JOIN comanda c ON cp.comandaId = c.id
                 INNER JOIN produto pr ON cp.produtoId = pr.id
                 INNER JOIN cliente cli ON c.clienteId = cli.id
-                WHERE c.status = 'PAGA'
-            ) as relatorio
-            WHERE 1=1
-        `;
-        
-        let params = [];
-
-        if (dataInicio && dataFim) {
-            sql += " AND DATE(dataFechamento) BETWEEN ? AND ?";
-            params.push(dataInicio, dataFim);
-        }
-        
-        if (profissionalId) {
-            sql += " AND profissionalId = ?";
-            params.push(profissionalId);
+                WHERE ${cond}
+            `);
         }
 
-        sql += " ORDER BY dataFechamento DESC";
+        if (partes.length === 0) return [];
 
+        const sql = `(${partes.join(') UNION ALL (')}) ORDER BY dataFechamento DESC`;
         return await this.#banco.ExecutaComando(sql, params);
     }
 }

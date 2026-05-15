@@ -79,6 +79,11 @@ export default function AgendaAdmin() {
   const [horariosOcupadosArray, setHorariosOcupadosArray] = useState<string[]>([]); // Guarda os blocos bloqueados
   // ============================================
 
+  const [abaAtiva, setAbaAtiva] = useState<"diaria" | "todos">("diaria");
+  const [agendamentosTodos, setAgendamentosTodos] = useState<any[]>([]);
+  const [loadingTodos, setLoadingTodos] = useState(false);
+  const [filtroStatusTodos, setFiltroStatusTodos] = useState("");
+
   // Estados do Modal de Novo Agendamento
   const [modalAberto, setModalAberto] = useState(false);
   const [horaSelecionada, setHoraSelecionada] = useState("");
@@ -130,6 +135,12 @@ export default function AgendaAdmin() {
       setHorariosOcupadosArray([]);
     }
   }, [dataSelecionada, profissionalFiltro]);
+
+  useEffect(() => {
+    if (abaAtiva === "todos" && profissionalFiltro) {
+      carregarTodosAgendamentos();
+    }
+  }, [abaAtiva, profissionalFiltro, filtroStatusTodos]);
 
   const carregarDadosBase = async () => {
     try {
@@ -183,8 +194,20 @@ export default function AgendaAdmin() {
         setHorariosOcupadosArray(await resOcupados.json());
       }
 
-    } catch (error) { console.error("Erro:", error); } 
+    } catch (error) { console.error("Erro:", error); }
     finally { setLoading(false); }
+  };
+
+  const carregarTodosAgendamentos = async () => {
+    if (!profissionalFiltro) { setAgendamentosTodos([]); return; }
+    setLoadingTodos(true);
+    try {
+      let url = `${process.env.NEXT_PUBLIC_API_URL}/agendamentos/relatorio/agenda?profissionalId=${profissionalFiltro}`;
+      if (filtroStatusTodos) url += `&status=${filtroStatusTodos}`;
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${obterToken()}` } });
+      if (res.ok) setAgendamentosTodos(await res.json());
+    } catch (e) { console.error("Erro ao carregar todos os agendamentos:", e); }
+    finally { setLoadingTodos(false); }
   };
 
   const gerarHorariosDinamicos = (dataReferencia: Date, dispProfissional: any[]) => {
@@ -268,8 +291,10 @@ export default function AgendaAdmin() {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${obterToken()}` },
         body: JSON.stringify({ status: "CONCLUIDO" })
       });
-      if (response.ok) carregarAgendamentosEHorarios();
-      else alert("Erro ao concluir o agendamento.");
+      if (response.ok) {
+        if (abaAtiva === "todos") carregarTodosAgendamentos();
+        else carregarAgendamentosEHorarios();
+      } else { alert("Erro ao concluir o agendamento."); }
     } catch (error) { console.error(error); }
   };
 
@@ -289,8 +314,10 @@ export default function AgendaAdmin() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/${id}/cancelar`, {
         method: "PUT", headers: { "Authorization": `Bearer ${obterToken()}` }
       });
-      if (response.ok) carregarAgendamentosEHorarios();
-      else alert("Erro ao cancelar.");
+      if (response.ok) {
+        if (abaAtiva === "todos") carregarTodosAgendamentos();
+        else carregarAgendamentosEHorarios();
+      } else { alert("Erro ao cancelar."); }
     } catch (error) { console.error(error); }
   };
   // ==========================================
@@ -371,7 +398,7 @@ export default function AgendaAdmin() {
 
   const extrairHoraDeISO = (isoString: string) => {
     if (!isoString) return "";
-    return new Date(isoString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+    return new Date(isoString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatarDataHeader = (data: Date) => data.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -452,6 +479,25 @@ export default function AgendaAdmin() {
         </div>
       </header>
 
+      {/* ABAS */}
+      <div className="max-w-7xl mx-auto mb-6">
+        <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1 w-fit">
+          <button
+            onClick={() => setAbaAtiva("diaria")}
+            className={`py-2 px-5 rounded-lg text-sm font-bold transition-all ${abaAtiva === "diaria" ? "bg-[#E4B77D] text-black shadow-md" : "text-zinc-400 hover:text-white"}`}
+          >
+            Agenda Diária
+          </button>
+          <button
+            onClick={() => setAbaAtiva("todos")}
+            className={`py-2 px-5 rounded-lg text-sm font-bold transition-all ${abaAtiva === "todos" ? "bg-[#E4B77D] text-black shadow-md" : "text-zinc-400 hover:text-white"}`}
+          >
+            Todos os Agendamentos
+          </button>
+        </div>
+      </div>
+
+      {abaAtiva === "diaria" && (
       <main className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8">
         {/* COLUNA ESQUERDA: Navegação */}
         <aside id="tour-calendario" className="w-full lg:w-80 flex flex-col gap-6">
@@ -595,6 +641,113 @@ export default function AgendaAdmin() {
           </div>
         </section>
       </main>
+      )}
+
+      {abaAtiva === "todos" && (
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-4 mb-6 flex-wrap">
+            <span className="text-sm text-zinc-400 font-medium">Filtrar por status:</span>
+            <select
+              value={filtroStatusTodos}
+              onChange={(e) => setFiltroStatusTodos(e.target.value)}
+              className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#E4B77D]"
+            >
+              <option value="">Todos</option>
+              <option value="AGENDADO">Agendados</option>
+              <option value="CONCLUIDO">Concluídos</option>
+              <option value="CANCELADO">Cancelados</option>
+            </select>
+            <span className="text-sm text-zinc-600">
+              {agendamentosTodos.length} agendamento{agendamentosTodos.length !== 1 ? "s" : ""} encontrado{agendamentosTodos.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+
+          {loadingTodos ? (
+            <div className="flex justify-center py-20">
+              <div className="w-8 h-8 border-2 border-[#E4B77D] border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : agendamentosTodos.length === 0 ? (
+            <div className="flex flex-col items-center py-20 text-zinc-500">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mb-4 opacity-30">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p className="text-lg font-medium">Nenhum agendamento encontrado</p>
+              <p className="text-sm mt-1">Tente ajustar os filtros ou selecione outro barbeiro.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-6">
+              {Object.entries(
+                agendamentosTodos.reduce((acc: Record<string, any[]>, ag: any) => {
+                  const key = ag.dataHora ? String(ag.dataHora).split('T')[0] : "sem-data";
+                  if (!acc[key]) acc[key] = [];
+                  acc[key].push(ag);
+                  return acc;
+                }, {})
+              )
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([dataKey, ags]) => {
+                const [ano, mes, dia] = dataKey.split('-').map(Number);
+                const dataLabel = new Date(ano, mes - 1, dia).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                const hojeKey = new Date().toISOString().split('T')[0];
+                const isHoje = dataKey === hojeKey;
+                const isPast = dataKey < hojeKey;
+                return (
+                  <div key={dataKey}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className={`w-1 h-5 rounded-full ${isHoje ? 'bg-[#E4B77D]' : isPast ? 'bg-zinc-700' : 'bg-blue-500'}`} />
+                      <h3 className="text-sm font-bold uppercase tracking-wider capitalize text-zinc-400">{dataLabel}</h3>
+                      {isHoje && <span className="text-[10px] bg-[#E4B77D]/20 text-[#E4B77D] border border-[#E4B77D]/30 rounded-full px-2 py-0.5 font-bold">HOJE</span>}
+                      <span className="text-xs text-zinc-600 ml-auto">{ags.length} agendamento{ags.length !== 1 ? "s" : ""}</span>
+                    </div>
+                    <div className="flex flex-col gap-2 pl-4">
+                      {(ags as any[]).sort((a, b) => String(a.dataHora).localeCompare(String(b.dataHora))).map((ag: any) => {
+                        const hora = extrairHoraDeISO(ag.dataHora);
+                        const statusStyles: Record<string, string> = {
+                          AGENDADO: "bg-blue-950/40 border-blue-900/60 text-blue-400",
+                          CONCLUIDO: "bg-green-950/40 border-green-900/60 text-green-400",
+                          CANCELADO: "bg-red-950/30 border-red-900/40 text-red-400",
+                        };
+                        const cardStyle = ag.status === "AGENDADO"
+                          ? "bg-zinc-900 border-zinc-800 hover:border-[#E4B77D]/30"
+                          : ag.status === "CONCLUIDO"
+                          ? "bg-zinc-900/60 border-zinc-800/60 opacity-75"
+                          : "bg-zinc-900/40 border-zinc-800/40 opacity-55";
+                        return (
+                          <div key={ag.id} className={`flex items-center gap-4 border rounded-lg p-4 transition-all group ${cardStyle}`}>
+                            <div className="w-16 text-center font-mono font-bold text-xl text-[#E4B77D] shrink-0">{hora}</div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-white truncate">{ag.clienteNome}</p>
+                              <p className="text-sm text-zinc-400 flex items-center gap-1 mt-0.5 truncate">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="shrink-0"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" /></svg>
+                                {ag.nomesServicos || "Nenhum serviço"}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${statusStyles[ag.status] || "bg-zinc-800 border-zinc-700 text-zinc-400"}`}>
+                                {ag.status}
+                              </span>
+                              {ag.status === "AGENDADO" && (
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={() => abrirModalCancelar(ag.id)} className="p-1.5 text-zinc-400 hover:text-red-400 bg-zinc-800 rounded-md border border-zinc-700 transition-colors" title="Cancelar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                  </button>
+                                  <button onClick={() => abrirModalConcluir(ag.id)} className="p-1.5 text-zinc-400 hover:text-green-400 bg-zinc-800 rounded-md border border-zinc-700 transition-colors" title="Concluir">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* MODAL DE NOVO AGENDAMENTO */}
       {modalAberto && (
