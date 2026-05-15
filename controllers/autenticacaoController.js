@@ -80,8 +80,10 @@ export default class AutenticacaoController {
 
             return res.status(200).json({ msg: "Código enviado! Verifique sua caixa de entrada." });
         } catch (ex) {
-            console.error("Erro ao enviar código:", ex);
-            return res.status(500).json({ msg: "Erro ao enviar o código de verificação." });
+            console.error("=== ERRO AO ENVIAR CÓDIGO ===");
+            console.error("Mensagem:", ex.message);
+            console.error("Stack:", ex.stack);
+            return res.status(500).json({ msg: `Erro interno: ${ex.message}` });
         }
     }
 
