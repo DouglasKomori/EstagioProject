@@ -63,7 +63,6 @@ export default function AgendamentoCliente() {
   const iniciarTour = () => { setTourPasso(0); setTourEntrando(true); setTourAtivo(true); setTimeout(() => setTourEntrando(false), 350); };
   const irParaPasso = useCallback((novo: number) => { setTourEntrando(true); setTimeout(() => { setTourPasso(novo); setTimeout(() => setTourEntrando(false), 50); }, 150); }, []);
 
-  // Estados de Dados
   const [meusAgendamentos, setMeusAgendamentos] = useState<any[]>([]);
   const [listaProfissionais, setListaProfissionais] = useState<any[]>([]);
   const [listaServicos, setListaServicos] = useState<any[]>([]);
@@ -71,11 +70,9 @@ export default function AgendamentoCliente() {
   const [usuarioNome, setUsuarioNome] = useState("");
   const [horariosOcupados, setHorariosOcupados] = useState<string[]>([]);
 
-  // === FEEDBACKS VISUAIS DA TELA PRINCIPAL ===
   const [sucesso, setSucesso] = useState("");
   const [erroPrincipal, setErroPrincipal] = useState("");
 
-  // === ESTADO DO NOSSO NOVO MODAL DE CONFIRMAÇÃO ===
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
     titulo: "",
@@ -84,12 +81,9 @@ export default function AgendamentoCliente() {
     onConfirm: () => {}
   });
 
-  // === LÓGICA DINÂMICA ===
   const [disponibilidades, setDisponibilidades] = useState<any[]>([]);
   const [horariosDinamicos, setHorariosDinamicos] = useState<string[]>([]);
-  // ==============================
 
-  // Estados do Formulário de Novo Agendamento
   const [dataSelecionada, setDataSelecionada] = useState(new Date());
   const [dataVisualizacao, setDataVisualizacao] = useState(new Date());
   const [horaSelecionada, setHoraSelecionada] = useState("");
@@ -100,7 +94,6 @@ export default function AgendamentoCliente() {
 
   const obterToken = () => localStorage.getItem("token") || "";
 
-  // 1. Roda APENAS UMA VEZ na montagem da tela
   useEffect(() => {
     const usuarioString = localStorage.getItem("usuario");
     if (!usuarioString || !obterToken()) {
@@ -111,7 +104,6 @@ export default function AgendamentoCliente() {
     carregarDadosIniciais();
   }, []);
 
-  // 2. Roda SEMPRE que o dia ou o barbeiro mudar
   useEffect(() => {
     if (profissionalSelecionado) {
       buscarEscalaEHorariosOcupados();
@@ -135,17 +127,13 @@ export default function AgendamentoCliente() {
     setLoading(true);
     try {
       const headers = { "Authorization": `Bearer ${obterToken()}` };
-      
       const resPro = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/profissionais`, { headers });
-      if(resPro.ok) setListaProfissionais(await resPro.json());
-
+      if (resPro.ok) setListaProfissionais(await resPro.json());
       const resServicos = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos`, { headers });
-      if(resServicos.ok) setListaServicos(await resServicos.json());
-
+      if (resServicos.ok) setListaServicos(await resServicos.json());
       const resAgendamentos = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/meus`, { headers });
-      if(resAgendamentos.ok) setMeusAgendamentos(await resAgendamentos.json());
-      
-    } catch (error) { console.error("Erro ao carregar dados", error); } 
+      if (resAgendamentos.ok) setMeusAgendamentos(await resAgendamentos.json());
+    } catch (error) { console.error("Erro ao carregar dados", error); }
     finally { setLoading(false); }
   };
 
@@ -154,15 +142,11 @@ export default function AgendamentoCliente() {
     const mes = String(dataSelecionada.getMonth() + 1).padStart(2, '0');
     const dia = String(dataSelecionada.getDate()).padStart(2, '0');
     const dataFormatada = `${ano}-${mes}-${dia}`;
-
     try {
-      // Busca horários que já estão agendados ou bloqueados
       const resOcupados = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/ocupados?data=${dataFormatada}&profissionalId=${profissionalSelecionado}`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       if (resOcupados.ok) setHorariosOcupados(await resOcupados.json());
-
-      // Busca a disponibilidade geral do barbeiro
       const resDisp = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/disponibilidade?profissionalId=${profissionalSelecionado}`, {
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
@@ -171,42 +155,34 @@ export default function AgendamentoCliente() {
         setDisponibilidades(disp);
         gerarHorariosDinamicos(dataSelecionada, disp);
       }
-    } catch (e) { 
-      console.error("Erro ao buscar dados dinâmicos"); 
-    }
+    } catch (e) { console.error("Erro ao buscar dados dinâmicos"); }
   };
 
   const gerarHorariosDinamicos = (dataReferencia: Date, dispProfissional: any[]) => {
     const diaSemana = dataReferencia.getDay();
     const turnosDoDia = dispProfissional.filter(d => d.diaSemana === diaSemana);
-    
     let slotsGerados: string[] = [];
-
     turnosDoDia.forEach(turno => {
       let [hInicio, mInicio] = turno.horaInicio.split(':').map(Number);
       let [hFim, mFim] = turno.horaFim.split(':').map(Number);
-
       let dataAtual = new Date();
       dataAtual.setHours(hInicio, mInicio, 0, 0);
-
       let dataFimTurno = new Date();
       dataFimTurno.setHours(hFim, mFim, 0, 0);
-
       while (dataAtual < dataFimTurno) {
         slotsGerados.push(dataAtual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
         dataAtual.setMinutes(dataAtual.getMinutes() + 30);
       }
     });
-
     setHorariosDinamicos([...new Set(slotsGerados)].sort());
-    setHoraSelecionada(""); // Reseta a seleção quando troca de dia
+    setHoraSelecionada("");
   };
 
   const verificarPodeCancelar = (dataHoraISO: string) => {
     const agora = new Date();
     const dataAgendamento = new Date(dataHoraISO);
     const diferencaMinutos = (dataAgendamento.getTime() - agora.getTime()) / (1000 * 60);
-    return diferencaMinutos >= 120; 
+    return diferencaMinutos >= 120;
   };
 
   const abrirModalCancelar = (id: number) => {
@@ -214,36 +190,33 @@ export default function AgendamentoCliente() {
       isOpen: true,
       titulo: "Cancelar Agendamento?",
       mensagem: "Deseja realmente CANCELAR este agendamento?",
-      tipo: "perigo", // Vermelho
+      tipo: "perigo",
       onConfirm: () => efetivarCancelamento(id)
     });
   };
 
   const efetivarCancelamento = async (id: number) => {
-    setConfirmModal({ ...confirmModal, isOpen: false }); // Fecha o modal
+    setConfirmModal({ ...confirmModal, isOpen: false });
     setLoading(true);
-    
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/${id}/cancelar`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${obterToken()}` }
       });
       const data = await response.json();
-      
       if (response.ok) {
         exibirSucesso("Agendamento cancelado com sucesso!");
-        carregarDadosIniciais(); 
-        if (profissionalSelecionado) buscarEscalaEHorariosOcupados(); // Atualiza a grade se estiver aberta
+        carregarDadosIniciais();
+        if (profissionalSelecionado) buscarEscalaEHorariosOcupados();
       } else {
         exibirErroPrincipal(data.msg || "Erro ao cancelar.");
       }
-    } catch (error) { 
+    } catch (error) {
       exibirErroPrincipal("Erro de conexão ao tentar cancelar.");
     } finally {
       setLoading(false);
     }
   };
-  // ==========================================
 
   const handleCheckboxServico = (idServico: number, checked: boolean) => {
     if (checked) setServicosSelecionados([...servicosSelecionados, idServico]);
@@ -264,26 +237,22 @@ export default function AgendamentoCliente() {
   const salvarAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
     setErroForm("");
-
     if (!horaSelecionada || !profissionalSelecionado || servicosSelecionados.length === 0) {
       setErroForm("Preencha todos os campos obrigatórios (Profissional, Serviços e Horário).");
       return;
     }
-
     const usuarioData = JSON.parse(localStorage.getItem("usuario") || "{}");
     const ano = dataSelecionada.getFullYear();
     const mes = String(dataSelecionada.getMonth() + 1).padStart(2, '0');
     const dia = String(dataSelecionada.getDate()).padStart(2, '0');
     const dataHoraFormatada = `${ano}-${mes}-${dia}T${horaSelecionada}:00`;
-
     const payload = {
       dataHora: dataHoraFormatada,
-      clienteId: usuarioData.id, 
+      clienteId: usuarioData.id,
       profissionalId: Number(profissionalSelecionado),
       observacao: observacao,
       servicos: servicosSelecionados.map(id => ({ id }))
     };
-
     setLoading(true);
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos`, {
@@ -291,10 +260,8 @@ export default function AgendamentoCliente() {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${obterToken()}` },
         body: JSON.stringify(payload)
       });
-      
       const data = await response.json();
       if (response.ok) {
-        // SUBSTITUÍDO O ALERT PELO NOSSO AVISO ELEGANTE
         exibirSucesso("Agendamento realizado com sucesso! Te esperamos na barbearia.");
         setHoraSelecionada("");
         setServicosSelecionados([]);
@@ -322,19 +289,16 @@ export default function AgendamentoCliente() {
   const renderizarDiasCalendario = () => {
     const ano = dataVisualizacao.getFullYear();
     const mes = dataVisualizacao.getMonth();
-    const primeiroDia = new Date(ano, mes, 1).getDay(); 
+    const primeiroDia = new Date(ano, mes, 1).getDay();
     const totalDias = new Date(ano, mes + 1, 0).getDate();
     const hoje = new Date();
-    hoje.setHours(0,0,0,0);
-
+    hoje.setHours(0, 0, 0, 0);
     const dias = [];
-    for (let i = 0; i < primeiroDia; i++) dias.push(<div key={`empty-${i}`} className="w-10 h-10"></div>);
-    
+    for (let i = 0; i < primeiroDia; i++) dias.push(<div key={`empty-${i}`} className="w-10 h-10" />);
     for (let i = 1; i <= totalDias; i++) {
       const dataDesteDia = new Date(ano, mes, i);
       const isSelecionado = dataDesteDia.toDateString() === dataSelecionada.toDateString();
       const isPassado = dataDesteDia < hoje;
-
       dias.push(
         <button
           key={i}
@@ -342,9 +306,9 @@ export default function AgendamentoCliente() {
           disabled={isPassado}
           onClick={() => setDataSelecionada(dataDesteDia)}
           className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-medium transition-all mx-auto
-            ${isPassado ? "text-zinc-700 cursor-not-allowed" 
-            : isSelecionado ? "bg-[#E4B77D] text-black shadow-lg shadow-[#E4B77D]/30 font-bold scale-110" 
-            : "text-zinc-300 hover:bg-zinc-800 hover:text-white"}
+            ${isPassado ? "text-zinc-700 cursor-not-allowed"
+              : isSelecionado ? "bg-[#E4B77D] text-black shadow-lg shadow-[#E4B77D]/30 font-bold scale-110"
+              : "text-zinc-300 hover:bg-zinc-800 hover:text-white"}
           `}
         >
           {i}
@@ -356,105 +320,170 @@ export default function AgendamentoCliente() {
 
   const totalCalculado = calcularTempoEValor();
 
-  return (
-    <div className="min-h-screen bg-black text-white p-4 md:p-8 font-sans">
-      {tourAtivo && (<Tour passo={tourPasso} entrando={tourEntrando} onProximo={() => irParaPasso(tourPasso + 1)} onAnterior={() => irParaPasso(tourPasso - 1)} onFechar={() => setTourAtivo(false)} />)}
+  const corStatus = (status: string) => {
+    if (status === 'AGENDADO') return 'bg-blue-400';
+    if (status === 'CONCLUIDO') return 'bg-green-400';
+    return 'bg-red-400';
+  };
 
-      <header className="flex justify-between items-center max-w-7xl mx-auto mb-10 border-b border-zinc-900 pb-6">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">
-            Olá, <span className="text-[#E4B77D]">{usuarioNome.split(" ")[0]}</span>
-          </h1>
-          <p className="text-zinc-400 mt-1">Gerencie seus horários na barbearia.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button onClick={iniciarTour} className="px-4 py-2 bg-zinc-900 text-[#E4B77D] font-bold rounded-md hover:bg-zinc-800 transition-all border border-[#E4B77D]/30 hover:border-[#E4B77D]/70 flex items-center gap-2 text-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            ? Ajuda
-          </button>
-          <Link href="/" className="px-5 py-2 text-sm font-medium text-zinc-300 bg-zinc-900 border border-zinc-800 rounded-md hover:text-white hover:bg-zinc-800 transition-colors">
-            Voltar para Home
-          </Link>
+  return (
+    <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-[#E4B77D] selection:text-black">
+      {tourAtivo && (
+        <Tour
+          passo={tourPasso}
+          entrando={tourEntrando}
+          onProximo={() => irParaPasso(tourPasso + 1)}
+          onAnterior={() => irParaPasso(tourPasso - 1)}
+          onFechar={() => setTourAtivo(false)}
+        />
+      )}
+
+      {/* ─── HEADER ─────────────────────────────────────────── */}
+      <header className="relative border-b border-zinc-900 bg-zinc-950">
+        {/* Linha dourada decorativa no topo */}
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#E4B77D]/50 to-transparent" />
+
+        <div className="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center">
+          <div>
+            <p className="text-[#E4B77D] text-xs font-bold tracking-[0.3em] uppercase mb-1.5">
+              Barbearia Victor Uematsu
+            </p>
+            <h1 className="text-3xl font-extrabold tracking-tight">
+              Olá, <span className="text-[#E4B77D]">{usuarioNome.split(" ")[0]}</span>
+            </h1>
+            <p className="text-zinc-500 mt-1 text-sm">Gerencie seus horários com facilidade.</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={iniciarTour}
+              className="px-4 py-2.5 bg-zinc-900 text-[#E4B77D] font-bold rounded-xl hover:bg-zinc-800 transition-all border border-[#E4B77D]/20 hover:border-[#E4B77D]/50 flex items-center gap-2 text-sm"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Ajuda
+            </button>
+            <Link
+              href="/"
+              className="px-5 py-2.5 text-sm font-medium text-zinc-400 bg-zinc-900 border border-zinc-800 rounded-xl hover:text-white hover:border-zinc-600 transition-all"
+            >
+              ← Voltar
+            </Link>
+          </div>
         </div>
       </header>
 
-      {/* FEEDBACKS VISUAIS */}
+      {/* ─── FEEDBACKS ─────────────────────────────────────── */}
       {sucesso && (
-        <div className="max-w-7xl mx-auto mb-6 bg-green-950/50 border border-green-900 text-green-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-          <span className="font-medium">{sucesso}</span>
+        <div className="max-w-7xl mx-auto px-6 mt-6">
+          <div className="bg-green-950/50 border border-green-900/60 text-green-400 px-5 py-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="w-8 h-8 rounded-full bg-green-900/60 flex items-center justify-center flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <span className="font-medium text-sm">{sucesso}</span>
+          </div>
         </div>
       )}
 
       {erroPrincipal && (
-        <div className="max-w-7xl mx-auto mb-6 bg-red-950/50 border border-red-900 text-red-400 p-4 rounded-lg flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-4 duration-300">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          <span className="font-medium">{erroPrincipal}</span>
+        <div className="max-w-7xl mx-auto px-6 mt-6">
+          <div className="bg-red-950/50 border border-red-900/60 text-red-400 px-5 py-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="w-8 h-8 rounded-full bg-red-900/60 flex items-center justify-center flex-shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <span className="font-medium text-sm">{erroPrincipal}</span>
+          </div>
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10">
-        
+      {/* ─── CONTEÚDO PRINCIPAL ─────────────────────────────── */}
+      <main className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-12 gap-10">
+
+        {/* ── MEUS AGENDAMENTOS ── */}
         <section id="tour-meus-horarios" className="lg:col-span-5 flex flex-col gap-6">
-          <h2 className="text-xl font-bold flex items-center gap-2 border-b border-zinc-900 pb-3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-[#E4B77D]"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            Meus Próximos Horários
-          </h2>
+          <div>
+            <p className="text-[#E4B77D] text-xs font-bold tracking-[0.3em] uppercase mb-2">Sua Agenda</p>
+            <h2 className="text-2xl font-bold text-white">Próximos Horários</h2>
+          </div>
 
           <div className="flex flex-col gap-4">
             {meusAgendamentos.length === 0 ? (
-              <div className="bg-zinc-900/50 border border-zinc-800 border-dashed rounded-xl p-8 text-center">
-                <p className="text-zinc-500">Você ainda não tem nenhum agendamento futuro.</p>
-                <p className="text-sm text-zinc-600 mt-2">Use o painel ao lado para marcar seu primeiro horário!</p>
+              <div className="border border-dashed border-zinc-800 rounded-2xl p-10 text-center">
+                <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-600">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-zinc-400 font-medium">Nenhum horário agendado</p>
+                <p className="text-sm text-zinc-600 mt-1">Use o painel ao lado para marcar seu primeiro horário.</p>
               </div>
             ) : (
               meusAgendamentos.map(ag => {
                 const podeCancelar = verificarPodeCancelar(ag.dataHora);
-                
                 return (
-                  <div key={ag.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-lg relative overflow-hidden group">
-                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${ag.status === 'AGENDADO' ? 'bg-blue-500' : ag.status === 'CONCLUIDO' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                    
-                    <div className="flex justify-between items-start mb-3 pl-3">
+                  <div
+                    key={ag.id}
+                    className="relative bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 shadow-lg overflow-hidden group hover:border-zinc-700 transition-all duration-300"
+                  >
+                    {/* Barra colorida lateral */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${corStatus(ag.status)}`} />
+
+                    {/* Glow sutil no hover */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                      style={{ background: "radial-gradient(ellipse at top left, rgba(228,183,125,0.04) 0%, transparent 60%)" }} />
+
+                    <div className="pl-4 flex flex-col gap-3">
                       <div>
-                        <span className="text-xs font-bold uppercase tracking-wider text-[#E4B77D] mb-1 block">
-                          {ag.status}
-                        </span>
-                        <h3 className="text-lg font-bold capitalize text-white">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#E4B77D]">{ag.status}</span>
+                        <h3 className="text-base font-bold capitalize text-white mt-0.5">
                           {formatarDataTela(ag.dataHora)}
                         </h3>
                       </div>
-                    </div>
 
-                    <div className="pl-3 flex flex-col gap-2">
-                      <p className="text-sm text-zinc-300 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                        Profissional: <strong className="text-white">{ag.profissionalNome}</strong>
-                      </p>
-                      <p className="text-sm text-zinc-300 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" /></svg>
-                        {ag.nomesServicos || "Serviço não especificado"}
-                      </p>
-                    </div>
-
-                    {ag.status === 'AGENDADO' && (
-                      <div className="mt-5 pt-4 border-t border-zinc-800/50 pl-3">
-                        {podeCancelar ? (
-                          <button onClick={() => abrirModalCancelar(ag.id)} disabled={loading} className="text-sm text-red-400 hover:text-red-300 font-medium transition-colors disabled:opacity-50">
-                            Cancelar Agendamento
-                          </button>
-                        ) : (
-                          <p className="text-xs text-zinc-500 italic flex items-center gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                            Faltam menos de 2h. Para cancelar, ligue na barbearia.
-                          </p>
-                        )}
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-sm text-zinc-400 flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-600 flex-shrink-0">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span className="text-zinc-300">{ag.profissionalNome}</span>
+                        </p>
+                        <p className="text-sm text-zinc-400 flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-600 flex-shrink-0">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
+                          </svg>
+                          <span className="text-zinc-300">{ag.nomesServicos || "Serviço não especificado"}</span>
+                        </p>
                       </div>
-                    )}
+
+                      {ag.status === 'AGENDADO' && (
+                        <div className="pt-3 border-t border-zinc-800/60">
+                          {podeCancelar ? (
+                            <button
+                              onClick={() => abrirModalCancelar(ag.id)}
+                              disabled={loading}
+                              className="text-sm text-red-400/80 hover:text-red-400 font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              Cancelar Agendamento
+                            </button>
+                          ) : (
+                            <p className="text-xs text-zinc-600 italic flex items-center gap-1.5">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              Faltam menos de 2h. Ligue na barbearia.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })
@@ -462,19 +491,37 @@ export default function AgendamentoCliente() {
           </div>
         </section>
 
+        {/* ── FORMULÁRIO DE AGENDAMENTO ── */}
         <section className="lg:col-span-7">
-          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-6 md:p-8 shadow-2xl relative">
-            <h2 className="text-2xl font-bold text-white mb-6">Agendar Novo Horário</h2>
-            
-            <form onSubmit={salvarAgendamento} className="flex flex-col gap-8">
-              {erroForm && <div className="bg-red-950/40 border border-red-900 text-red-400 p-3 rounded-lg text-sm">{erroForm}</div>}
+          <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl">
 
+            {/* Cabeçalho do painel */}
+            <div className="relative border-b border-zinc-800 px-8 py-6 bg-zinc-900/50">
+              <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#E4B77D]/30 to-transparent" />
+              <p className="text-[#E4B77D] text-xs font-bold tracking-[0.3em] uppercase mb-1">Novo Horário</p>
+              <h2 className="text-2xl font-bold text-white">Agendar na Barbearia</h2>
+            </div>
+
+            <form onSubmit={salvarAgendamento} className="p-8 flex flex-col gap-8">
+              {erroForm && (
+                <div className="bg-red-950/40 border border-red-900/60 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  {erroForm}
+                </div>
+              )}
+
+              {/* Barbeiro + Serviços */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div id="tour-barbeiro">
-                  <label className="block text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">1. Escolha o Barbeiro</label>
-                  <select 
-                    value={profissionalSelecionado} onChange={(e) => setProfissionalSelecionado(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-white focus:outline-none focus:border-[#E4B77D] transition-colors appearance-none cursor-pointer"
+                  <label className="block text-[10px] font-bold text-[#E4B77D] mb-3 uppercase tracking-[0.25em]">
+                    1. Barbeiro
+                  </label>
+                  <select
+                    value={profissionalSelecionado}
+                    onChange={(e) => setProfissionalSelecionado(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3.5 text-white text-sm focus:outline-none focus:border-[#E4B77D]/60 transition-colors appearance-none cursor-pointer hover:border-zinc-700"
                   >
                     <option value="" disabled>Selecione um profissional...</option>
                     {listaProfissionais.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
@@ -482,83 +529,108 @@ export default function AgendamentoCliente() {
                 </div>
 
                 <div id="tour-servicos">
-                  <label className="block text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">2. Escolha os Serviços</label>
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 max-h-40 overflow-y-auto custom-scrollbar flex flex-col gap-2">
+                  <label className="block text-[10px] font-bold text-[#E4B77D] mb-3 uppercase tracking-[0.25em]">
+                    2. Serviços
+                  </label>
+                  <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 max-h-40 overflow-y-auto custom-scrollbar flex flex-col gap-1">
                     {listaServicos.map(serv => (
-                      <label key={serv.id} className="flex items-center justify-between cursor-pointer p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+                      <label
+                        key={serv.id}
+                        className="flex items-center justify-between cursor-pointer px-3 py-2 hover:bg-zinc-900 rounded-lg transition-colors"
+                      >
                         <div className="flex items-center gap-3">
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             checked={servicosSelecionados.includes(serv.id)}
                             onChange={(e) => handleCheckboxServico(serv.id, e.target.checked)}
-                            className="w-5 h-5 accent-[#E4B77D] rounded"
+                            className="w-4 h-4 accent-[#E4B77D] rounded"
                           />
-                          <span className="text-zinc-200">{serv.nome}</span>
+                          <span className="text-zinc-200 text-sm">{serv.nome}</span>
                         </div>
-                        <span className="text-[#E4B77D] text-sm font-medium">R$ {Number(serv.valor).toFixed(2)}</span>
+                        <span className="text-[#E4B77D] text-xs font-semibold">R$ {Number(serv.valor).toFixed(2)}</span>
                       </label>
                     ))}
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-zinc-900 pt-6">
+              {/* Divisor dourado */}
+              <div className="h-px bg-gradient-to-r from-transparent via-zinc-800 to-transparent" />
+
+              {/* Calendário + Horários */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div id="tour-dia">
-                  <label className="block text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">3. Escolha o Dia</label>
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+                  <label className="block text-[10px] font-bold text-[#E4B77D] mb-3 uppercase tracking-[0.25em]">
+                    3. Dia
+                  </label>
+                  <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4">
                     <div className="flex justify-between items-center mb-4">
-                      <button type="button" onClick={mesAnterior} className="p-2 text-zinc-400 hover:text-[#E4B77D]"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></button>
-                      <span className="font-bold text-white capitalize">{dataVisualizacao.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
-                      <button type="button" onClick={proximoMes} className="p-2 text-zinc-400 hover:text-[#E4B77D]"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></button>
+                      <button type="button" onClick={mesAnterior} className="p-2 text-zinc-500 hover:text-[#E4B77D] transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <span className="font-bold text-white text-sm capitalize">
+                        {dataVisualizacao.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                      </span>
+                      <button type="button" onClick={proximoMes} className="p-2 text-zinc-500 hover:text-[#E4B77D] transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
                     </div>
                     <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                      {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => <span key={d} className="text-xs font-bold text-zinc-600">{d}</span>)}
+                      {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
+                        <span key={d} className="text-[10px] font-bold text-zinc-600">{d}</span>
+                      ))}
                     </div>
-                    <div className="grid grid-cols-7 gap-y-2">{renderizarDiasCalendario()}</div>
+                    <div className="grid grid-cols-7 gap-y-1">{renderizarDiasCalendario()}</div>
                   </div>
                 </div>
 
                 <div id="tour-horario">
-                  <label className="block text-sm font-bold text-zinc-400 mb-3 uppercase tracking-wider">4. Escolha o Horário</label>
-                  
+                  <label className="block text-[10px] font-bold text-[#E4B77D] mb-3 uppercase tracking-[0.25em]">
+                    4. Horário
+                  </label>
+
                   {!profissionalSelecionado ? (
-                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 text-center text-sm text-zinc-500">
-                      Selecione um barbeiro para ver os horários disponíveis.
+                    <div className="bg-zinc-950 border border-zinc-800 border-dashed rounded-xl p-6 text-center h-[calc(100%-2rem)] flex flex-col items-center justify-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-700">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <p className="text-zinc-600 text-sm">Selecione um barbeiro primeiro</p>
                     </div>
                   ) : horariosDinamicos.length === 0 ? (
-                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 text-center">
-                      <p className="text-zinc-400 text-sm font-medium">Dia de Folga</p>
-                      <p className="text-zinc-600 text-xs mt-1">O barbeiro não atende neste dia.</p>
+                    <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 text-center h-[calc(100%-2rem)] flex flex-col items-center justify-center gap-2">
+                      <p className="text-zinc-400 text-sm font-semibold">Dia de Folga</p>
+                      <p className="text-zinc-600 text-xs">O barbeiro não atende neste dia.</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2 max-h-[280px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="grid grid-cols-3 gap-2 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
                       {horariosDinamicos.map(hora => {
                         const hoje = new Date();
                         const isHoje = dataSelecionada.toDateString() === hoje.toDateString();
                         const [h, m] = hora.split(':').map(Number);
-                        
                         let isPassado = false;
                         if (isHoje) {
                           if (h < hoje.getHours() || (h === hoje.getHours() && m <= hoje.getMinutes())) {
                             isPassado = true;
                           }
                         }
-
                         const isOcupado = horariosOcupados.includes(hora);
                         const isDesabilitado = isPassado || isOcupado;
-
                         return (
                           <button
                             key={hora}
                             type="button"
                             disabled={isDesabilitado}
                             onClick={() => setHoraSelecionada(hora)}
-                            className={`py-3 rounded-lg text-sm font-bold font-mono transition-all border
-                              ${horaSelecionada === hora 
-                                ? "bg-[#E4B77D] text-black border-[#E4B77D] shadow-lg shadow-[#E4B77D]/20" 
-                                : isDesabilitado 
-                                ? "bg-zinc-950 border-zinc-900 text-zinc-800 cursor-not-allowed line-through"
-                                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-[#E4B77D]/50 hover:text-white"}
+                            className={`py-3 rounded-xl text-sm font-bold font-mono transition-all border
+                              ${horaSelecionada === hora
+                                ? "bg-[#E4B77D] text-black border-[#E4B77D] shadow-lg shadow-[#E4B77D]/20"
+                                : isDesabilitado
+                                ? "bg-zinc-950 border-zinc-900 text-zinc-700 cursor-not-allowed line-through"
+                                : "bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-[#E4B77D]/40 hover:text-white"}
                             `}
                           >
                             {hora}
@@ -570,30 +642,44 @@ export default function AgendamentoCliente() {
                 </div>
               </div>
 
-              <div id="tour-resumo" className="bg-zinc-900/50 border border-[#E4B77D]/30 rounded-xl p-5 mt-2 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="flex flex-col gap-1 w-full sm:w-auto">
-                  <span className="text-zinc-400 text-sm">Resumo do Agendamento:</span>
-                  <div className="flex items-baseline gap-3">
-                    <span className="text-2xl font-extrabold text-[#E4B77D]">R$ {totalCalculado.valor.toFixed(2)}</span>
-                    <span className="text-sm text-zinc-500">~ {totalCalculado.tempo} min estimados</span>
+              {/* Resumo + Confirmar */}
+              <div
+                id="tour-resumo"
+                className="relative bg-zinc-950 border border-[#E4B77D]/20 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-center gap-5 overflow-hidden"
+              >
+                {/* Glow dourado de fundo */}
+                <div className="absolute inset-0 pointer-events-none"
+                  style={{ background: "radial-gradient(ellipse at left center, rgba(228,183,125,0.06) 0%, transparent 65%)" }} />
+
+                <div className="relative flex flex-col gap-1 w-full sm:w-auto">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.25em]">Resumo</span>
+                  <div className="flex items-baseline gap-3 mt-0.5">
+                    <span className="text-3xl font-extrabold text-[#E4B77D]">
+                      R$ {totalCalculado.valor.toFixed(2)}
+                    </span>
+                    <span className="text-sm text-zinc-500">~ {totalCalculado.tempo} min</span>
                   </div>
+                  {horaSelecionada && (
+                    <p className="text-xs text-zinc-600 mt-1">
+                      {dataSelecionada.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })} às {horaSelecionada}
+                    </p>
+                  )}
                 </div>
-                
-                <button 
-                  type="submit" 
+
+                <button
+                  type="submit"
                   disabled={loading || !horaSelecionada}
-                  className="w-full sm:w-auto px-10 py-4 bg-[#E4B77D] text-black font-extrabold rounded-xl hover:bg-[#cfa56d] transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 shadow-xl shadow-[#E4B77D]/20"
+                  className="relative w-full sm:w-auto px-10 py-4 bg-[#E4B77D] text-black font-extrabold rounded-xl hover:bg-[#cfa56d] transition-all hover:scale-105 disabled:opacity-40 disabled:hover:scale-100 shadow-xl shadow-[#E4B77D]/20 text-sm tracking-wide"
                 >
                   {loading ? "Processando..." : "Confirmar Agendamento"}
                 </button>
               </div>
-
             </form>
           </div>
         </section>
       </main>
 
-      <ConfirmModal 
+      <ConfirmModal
         isOpen={confirmModal.isOpen}
         titulo={confirmModal.titulo}
         mensagem={confirmModal.mensagem}
@@ -601,7 +687,6 @@ export default function AgendamentoCliente() {
         onConfirm={confirmModal.onConfirm}
         onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })}
       />
-
     </div>
   );
 }
