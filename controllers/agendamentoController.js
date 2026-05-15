@@ -181,11 +181,12 @@ export default class AgendamentoController {
             const bloqueios = await this.#repoBloqueio.listar(false);
             const bloqueiosDoProfissional = bloqueios.filter(b => b.profissionalId == profissionalId);
 
-            const gradeHorarios = [
-                "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-                "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", 
-                "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00"
-            ];
+            const gradeHorarios = [];
+            for (let h = 0; h < 24; h++) {
+                for (let m = 0; m < 60; m += 30) {
+                    gradeHorarios.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+                }
+            }
 
             gradeHorarios.forEach(horaStr => {
                 const [h, m] = horaStr.split(':').map(Number);
