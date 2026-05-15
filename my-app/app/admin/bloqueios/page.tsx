@@ -245,8 +245,8 @@ export default function GerenciarBloqueios() {
   // ==========================================
 
   // Funções de formatação bonitas para a tela
-  const formatarData = (dataStr: string) => new Date(dataStr).toLocaleDateString('pt-BR');
-  const formatarHora = (dataStr: string) => new Date(dataStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const formatarData = (dataStr: string) => new Date(dataStr).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+  const formatarHora = (dataStr: string) => new Date(dataStr).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-4 md:p-8 font-sans">

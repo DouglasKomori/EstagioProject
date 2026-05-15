@@ -386,12 +386,12 @@ export default function GestaoCaixa() {
 
   const fmtHora = (iso: string) => {
     if (!iso) return "--:--";
-    return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
   };
 
   const fmtDataCompleta = (iso: string) => {
     if (!iso) return "--/--/----";
-    return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+    return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric", timeZone: "UTC" });
   };
 
   // Ícone por tipo de movimentação

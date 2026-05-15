@@ -371,7 +371,7 @@ export default function AgendaAdmin() {
 
   const extrairHoraDeISO = (isoString: string) => {
     if (!isoString) return "";
-    return new Date(isoString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return new Date(isoString).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
   };
 
   const formatarDataHeader = (data: Date) => data.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
