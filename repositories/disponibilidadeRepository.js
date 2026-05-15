@@ -9,18 +9,18 @@ export default class DisponibilidadeRepository {
 
     async listar(profissionalId = null) {
         let sql = `
-            SELECT d.*, p.nome as profissionalNome 
+            SELECT d.*, p.nome as profissionalNome
             FROM disponibilidade d
             INNER JOIN pessoa p ON d.profissionalId = p.id
             WHERE d.ativo = 1
         `;
         let params = [];
-        
+
         if (profissionalId) {
             sql += " AND d.profissionalId = ?";
             params.push(profissionalId);
         }
-        
+
         sql += " ORDER BY d.profissionalId, d.diaSemana, d.horaInicio";
         return await this.#banco.ExecutaComando(sql, params);
     }

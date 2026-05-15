@@ -19,18 +19,30 @@ function converterPlaceholders(sql) {
     return sql.replace(/\?/g, () => `$${++i}`);
 }
 
+const COLUNAS_CAMEL = {
+    tipopessoa: 'tipoPessoa', datanascimento: 'dataNascimento', nomefantasia: 'nomeFantasia',
+    tempoestimadominutos: 'tempoEstimadoMinutos', precocusto: 'precoCusto', precovenda: 'precoVenda',
+    quantidadeestoque: 'quantidadeEstoque', marcaid: 'marcaId', usuarioid: 'usuarioId',
+    dataabertura: 'dataAbertura', datafechamento: 'dataFechamento', saldoinicial: 'saldoInicial',
+    saldofinal: 'saldoFinal', diasemana: 'diaSemana', horainicio: 'horaInicio', horafim: 'horaFim',
+    profissionalid: 'profissionalId', datainicio: 'dataInicio', datafim: 'dataFim',
+    datahora: 'dataHora', clienteid: 'clienteId', servicoid: 'servicoId',
+    agendamentoid: 'agendamentoId', caixaid: 'caixaId', comandaid: 'comandaId',
+    produtoid: 'produtoId', valorcobrado: 'valorCobrado', datamovimentacao: 'dataMovimentacao',
+    profissionalnome: 'profissionalNome', clientenome: 'clienteNome', clientetelefone: 'clienteTelefone',
+    nomesservicos: 'nomesServicos', serviconome: 'servicoNome', receitatotal: 'receitaTotal',
+    ticketmedio: 'ticketMedio', primeiraocorrencia: 'primeiraOcorrencia', ultimaocorrencia: 'ultimaOcorrencia',
+    totalservicosdistintos: 'totalServicosDistintos', totalexecucoes: 'totalExecucoes',
+    totalclientesatendidos: 'totalClientesAtendidos', precobase: 'precoBase',
+};
+
 function normalizarRow(row) {
-    return new Proxy(row, {
-        get(target, prop) {
-            if (typeof prop === 'string' && !(prop in target)) {
-                const lower = prop.toLowerCase();
-                for (const key of Object.keys(target)) {
-                    if (key.toLowerCase() === lower) return target[key];
-                }
-            }
-            return target[prop];
-        }
-    });
+    const normalizado = {};
+    for (const [key, value] of Object.entries(row)) {
+        const novaClave = COLUNAS_CAMEL[key] || key;
+        normalizado[novaClave] = value;
+    }
+    return normalizado;
 }
 
 export default class Database {
