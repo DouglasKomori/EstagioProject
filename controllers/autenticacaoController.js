@@ -71,8 +71,7 @@ export default class AutenticacaoController {
 
             const usuario = await this.#usuarioRepository.buscarPorEmail(email);
             if (!usuario) {
-                // Resposta genérica para não revelar quais e-mails existem
-                return res.status(200).json({ msg: "Se este e-mail estiver cadastrado, você receberá o código em breve." });
+                return res.status(404).json({ msg: "E-mail não cadastrado. Verifique o endereço informado." });
             }
 
             const codigo = await this.#codigoRepo.gerarESalvar(email);
