@@ -511,7 +511,7 @@ export default function GerenciarComandas() {
                 ) : (
                   relatorio.map(item => (
                     <tr key={item.comandaId + item.servicoNome} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
-                      <td className="p-4 text-zinc-400">{new Date(item.dataFechamento).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit', timeZone: 'UTC' })}</td>
+                      <td className="p-4 text-zinc-400">{new Date(item.dataFechamento).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit', timeZone: 'America/Sao_Paulo' })}</td>
                       <td className="p-4"><span className="text-[#E4B77D] font-bold mr-2">#{item.numero_comanda}</span> {item.clienteNome}</td>
                       <td className="p-4 font-medium text-zinc-200 flex items-center gap-2">
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${item.tipo === 'PRODUTO' ? 'bg-blue-900/50 text-blue-400' : 'bg-amber-900/40 text-amber-400'}`}>

@@ -301,11 +301,11 @@ export default function RelatorioAgenda() {
   // Formatadores
   const formatarHora = (iso: string) => {
     if (!iso) return "--:--";
-    return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+    return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" });
   };
   const formatarData = (iso: string) => {
     if (!iso) return "--/--/----";
-    return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "UTC" });
+    return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
   };
 
   // Badge de status

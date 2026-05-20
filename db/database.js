@@ -14,6 +14,10 @@ const pool = new Pool({
     idleTimeoutMillis: 30000,
 });
 
+pool.on('connect', (client) => {
+    client.query("SET timezone = 'America/Sao_Paulo'");
+});
+
 function converterPlaceholders(sql) {
     let i = 0;
     return sql.replace(/\?/g, () => `$${++i}`);

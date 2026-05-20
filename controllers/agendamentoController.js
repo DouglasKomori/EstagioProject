@@ -14,7 +14,7 @@ export default class AgendamentoController {
         try {
             let data = req.query.data;
             if (!data) {
-                data = new Date().toISOString().split('T')[0]; 
+                data = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo' }).format(new Date());
             }
 
             let dataInicio = `${data} 00:00:00`;
