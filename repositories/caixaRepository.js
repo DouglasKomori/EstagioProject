@@ -110,6 +110,26 @@ export default class CaixaRepository {
         return todas;
     }
 
+    async faturamentoPorForma(caixaId) {
+        let sql = `
+            SELECT
+                COALESCE(SUM(CASE WHEN c.forma_pagamento = 'DINHEIRO' THEN (COALESCE(ts.total, 0) + COALESCE(tp.total, 0)) ELSE 0 END), 0) AS totaldinheiro,
+                COALESCE(SUM(CASE WHEN c.forma_pagamento = 'CREDITO'  THEN (COALESCE(ts.total, 0) + COALESCE(tp.total, 0)) ELSE 0 END), 0) AS totalcredito,
+                COALESCE(SUM(CASE WHEN c.forma_pagamento = 'DEBITO'   THEN (COALESCE(ts.total, 0) + COALESCE(tp.total, 0)) ELSE 0 END), 0) AS totaldebito,
+                COALESCE(SUM(CASE WHEN c.forma_pagamento = 'PIX'      THEN (COALESCE(ts.total, 0) + COALESCE(tp.total, 0)) ELSE 0 END), 0) AS totalpix
+            FROM comanda c
+            LEFT JOIN (
+                SELECT comandaId, SUM(valorCobrado) AS total FROM comanda_servico GROUP BY comandaId
+            ) ts ON ts.comandaId = c.id
+            LEFT JOIN (
+                SELECT comandaId, SUM(valorCobrado * quantidade) AS total FROM comanda_produto GROUP BY comandaId
+            ) tp ON tp.comandaId = c.id
+            WHERE c.caixaId = ? AND c.status = 'PAGA'
+        `;
+        let rows = await this.#banco.ExecutaComando(sql, [caixaId]);
+        return rows[0] || { totalDinheiro: 0, totalCredito: 0, totalDebito: 0, totalPix: 0 };
+    }
+
     async buscarDetalhesHistorico(caixaId) {
         // Serviços agrupados por nome + profissional
         let sqlServicos = `

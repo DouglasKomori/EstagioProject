@@ -26,8 +26,10 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.0",
     "pg": "^8.20.0",
+    "qrcode": "^1.5.4",
     "react-hot-toast": "^2.6.0",
     "resend": "^6.12.3",
+    "socket.io": "^4.8.3",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {

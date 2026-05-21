@@ -42,6 +42,12 @@ router.get("/relatorio/faturamento", auth.validarFuncionario, (req,res) => {
     ctrl.relatorio(req,res);
 });
 
+router.get("/minha", auth.validarToken, (req, res) => {
+    // #swagger.tags = ['Comandas - CLIENTE']
+    // #swagger.summary = "Retorna a comanda aberta do cliente autenticado"
+    ctrl.minhaComanda(req, res);
+});
+
 router.get("/:id", auth.validarFuncionario, (req,res) => {
     /* #swagger.security = [{
     "bearerAuth": []

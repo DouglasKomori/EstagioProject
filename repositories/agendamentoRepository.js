@@ -12,6 +12,7 @@ export default class AgendamentoRepository {
         let sql = `
             SELECT a.*,
                    c.nome as clienteNome,
+                   c.telefone as clienteTelefone,
                    p.nome as profissionalNome,
                    string_agg(s.nome, ' + ') as nomesServicos
             FROM agendamento a
@@ -20,7 +21,7 @@ export default class AgendamentoRepository {
             LEFT JOIN agendamento_servico aserv ON a.id = aserv.agendamentoId
             LEFT JOIN servico s ON aserv.servicoId = s.id
             WHERE a.dataHora BETWEEN ? AND ? AND a.ativo = 1
-            GROUP BY a.id, c.nome, p.nome
+            GROUP BY a.id, c.nome, c.telefone, p.nome
             ORDER BY a.dataHora ASC
         `;
         return await this.#banco.ExecutaComando(sql, [dataInicio, dataFim]);

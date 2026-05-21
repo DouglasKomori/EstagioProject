@@ -1,7 +1,8 @@
 import ComandaRepository from "../repositories/comandaRepository.js";
 import CaixaRepository from "../repositories/caixaRepository.js";
-import MovimentacaoRepository from "../repositories/movimentacaoRepository.js"; 
+import MovimentacaoRepository from "../repositories/movimentacaoRepository.js";
 import ProdutoRepository from "../repositories/produtoRepository.js";
+import { getIo } from "../socketManager.js";
 
 export default class ComandaController {
     #repo;
@@ -62,6 +63,12 @@ export default class ComandaController {
                 await this.#repo.adicionarProduto({ comandaId, produtoId: idItem, quantidade, valorCobrado: valor });
             }
 
+            const io = getIo();
+            if (io) {
+                const atualizada = await this.#repo.consultarDetalhes(comandaId);
+                io.to(`comanda-${comandaId}`).emit('comanda-atualizada', atualizada);
+            }
+
             return res.status(200).json({ msg: "Item adicionado à comanda!" });
         } catch (exception) {
             console.error(exception);
@@ -83,9 +90,16 @@ export default class ComandaController {
     async finalizarComanda(req, res) {
         try {
             let id = req.params.id;
+            let { formaPagamento, valorRecebido } = req.body;
+
+            const formasValidas = ['DINHEIRO', 'CREDITO', 'DEBITO', 'PIX'];
+            if (!formaPagamento || !formasValidas.includes(formaPagamento)) {
+                return res.status(400).json({ msg: "Selecione uma forma de pagamento válida." });
+            }
+
             const repoCaixa = new CaixaRepository();
             const caixaAberto = await repoCaixa.buscarCaixaAberto();
-            
+
             if (!caixaAberto) {
                 return res.status(400).json({ msg: "Abra o caixa do dia antes de receber pagamentos!" });
             }
@@ -102,14 +116,14 @@ export default class ComandaController {
 
                 for (const item of detalhes.produtos) {
                     const produtoBanco = await repoProduto.consultarPorId(item.produtoId);
-                    
+
                     if (!produtoBanco) {
                         return res.status(404).json({ msg: `Produto ${item.produtoNome} não encontrado no cadastro.` });
                     }
 
                     if (produtoBanco.quantidadeEstoque < item.quantidade) {
-                        return res.status(400).json({ 
-                            msg: `Estoque insuficiente para o produto: ${item.produtoNome}. Disponível: ${produtoBanco.quantidadeEstoque}, Tentando vender: ${item.quantidade}.` 
+                        return res.status(400).json({
+                            msg: `Estoque insuficiente para o produto: ${item.produtoNome}. Disponível: ${produtoBanco.quantidadeEstoque}, Tentando vender: ${item.quantidade}.`
                         });
                     }
                 }
@@ -132,9 +146,19 @@ export default class ComandaController {
                 }
             }
 
-            const result = await this.#repo.fecharComanda(id, caixaAberto.id);
-            
-            if (result) return res.status(200).json({ msg: "Comanda finalizada e paga!" });
+            const total = detalhes.servicos.reduce((a, s) => a + Number(s.valorCobrado), 0)
+                        + detalhes.produtos.reduce((a, p) => a + (Number(p.valorCobrado) * Number(p.quantidade)), 0);
+
+            let trocoCalculado = null;
+            let valorRecebidoFinal = null;
+            if (formaPagamento === 'DINHEIRO') {
+                valorRecebidoFinal = Number(valorRecebido) || 0;
+                trocoCalculado = Math.max(0, valorRecebidoFinal - total);
+            }
+
+            const result = await this.#repo.fecharComanda(id, caixaAberto.id, formaPagamento, valorRecebidoFinal, trocoCalculado);
+
+            if (result) return res.status(200).json({ msg: "Comanda finalizada e paga!", troco: trocoCalculado });
             else return res.status(400).json({ msg: "Erro ao finalizar comanda." });
 
         } catch (exception) {
@@ -156,7 +180,7 @@ export default class ComandaController {
     async removerItem(req, res) {
         try {
             let { tipo, id } = req.params;
-            
+
             let result;
             if (tipo.toUpperCase() === 'SERVICO') {
                 result = await this.#repo.removerServico(id);
@@ -164,11 +188,31 @@ export default class ComandaController {
                 result = await this.#repo.removerProduto(id);
             }
 
-            if (result) return res.status(200).json({ msg: "Item removido com sucesso!" });
-            else return res.status(400).json({ msg: "Não foi possível remover o item." });
+            if (result.success) {
+                const io = getIo();
+                if (io && result.comandaId) {
+                    const atualizada = await this.#repo.consultarDetalhes(result.comandaId);
+                    io.to(`comanda-${result.comandaId}`).emit('comanda-atualizada', atualizada);
+                }
+                return res.status(200).json({ msg: "Item removido com sucesso!" });
+            } else {
+                return res.status(400).json({ msg: "Não foi possível remover o item." });
+            }
         } catch (exception) {
             console.error(exception);
             return res.status(500).json({ msg: "Erro ao remover item da comanda." });
+        }
+    }
+
+    async minhaComanda(req, res) {
+        try {
+            const clienteId = req.usuarioLogado.id;
+            const comanda = await this.#repo.buscarAbertaPorClienteId(clienteId);
+            if (!comanda) return res.status(404).json({ msg: "Nenhuma comanda aberta no momento." });
+            return res.status(200).json(comanda);
+        } catch (exception) {
+            console.error(exception);
+            return res.status(500).json({ msg: "Erro ao buscar sua comanda." });
         }
     }
 

@@ -59,13 +59,15 @@ export default class CaixaController {
             if (!caixa) return res.status(400).json({ msg: "Não há nenhum caixa aberto no momento." });
 
             const faturamento = await this.#repo.calcularFaturamento(caixa.id);
+            const formasPagamento = await this.#repo.faturamentoPorForma(caixa.id);
             const saldoFinalEsperado = Number(caixa.saldoInicial) + Number(faturamento);
 
             return res.status(200).json({
                 saldoInicial: Number(caixa.saldoInicial),
                 faturamento: Number(faturamento),
                 saldoFinalEsperado: saldoFinalEsperado,
-                dataAbertura: caixa.dataAbertura
+                dataAbertura: caixa.dataAbertura,
+                formasPagamento
             });
         } catch (exception) {
             console.error(exception);
@@ -125,7 +127,8 @@ export default class CaixaController {
             }
 
             const detalhes = await this.#repo.buscarDetalhesHistorico(caixaId);
-            return res.status(200).json(detalhes);
+            const formasPagamento = await this.#repo.faturamentoPorForma(caixaId);
+            return res.status(200).json({ ...detalhes, formasPagamento });
         } catch (exception) {
             console.error(exception);
             return res.status(500).json({ msg: "Erro ao buscar detalhes do histórico." });

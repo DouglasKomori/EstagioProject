@@ -150,7 +150,14 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-zinc-950 flex font-sans">
+    <div className="min-h-screen w-full bg-zinc-950 flex font-sans relative">
+
+      {/* ── FUNDO MOBILE — visível apenas em telas pequenas ── */}
+      <div className="lg:hidden absolute inset-0 z-0">
+        <Image src="/img3.jpeg" alt="" fill className="object-cover" priority />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/85" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/40" />
+      </div>
 
       {/* ── PAINEL ESQUERDO — Imagem + Branding ── */}
       <div className="hidden lg:flex lg:w-[55%] xl:w-1/2 relative flex-col items-center justify-center overflow-hidden">
@@ -213,7 +220,7 @@ export default function Login() {
       </div>
 
       {/* ── PAINEL DIREITO — Formulário ── */}
-      <div className="w-full lg:w-[45%] xl:w-1/2 flex items-center justify-center px-6 py-16 overflow-y-auto">
+      <div className="w-full lg:w-[45%] xl:w-1/2 flex items-center justify-center px-6 py-16 overflow-y-auto relative z-10">
 
         {/* Voltar (mobile) */}
         <Link

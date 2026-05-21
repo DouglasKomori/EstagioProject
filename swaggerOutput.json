@@ -3168,6 +3168,38 @@
         ]
       }
     },
+    "/comandas/minha": {
+      "get": {
+        "tags": [
+          "Comandas - CLIENTE"
+        ],
+        "summary": "Retorna a comanda aberta do cliente autenticado",
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
     "/comandas/{id}": {
       "get": {
         "tags": [
@@ -3264,7 +3296,24 @@
           {
             "bearerAuth": []
           }
-        ]
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "formaPagamento": {
+                    "example": "any"
+                  },
+                  "valorRecebido": {
+                    "example": "any"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/comandas/remover-item/{tipo}/{id}": {
@@ -3777,6 +3826,41 @@
             "bearerAuth": []
           }
         ]
+      }
+    },
+    "/pix/qrcode": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "valor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
       }
     }
   },

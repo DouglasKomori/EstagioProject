@@ -106,6 +106,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               <span className="font-medium">Meus Agendamentos</span>
             </Link>
 
+            {/* Minha Comanda — visível apenas para CLIENTE logado */}
+            {usuarioLogado?.perfil === "CLIENTE" && (
+              <Link href="/minha-comanda" className="flex items-center gap-4 px-4 py-3 rounded-lg text-zinc-300 hover:text-[#E4B77D] hover:bg-zinc-900/50 transition-all group">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-500 group-hover:text-[#E4B77D] transition-colors">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                <span className="font-medium">Minha Comanda</span>
+              </Link>
+            )}
+
             {/* Opção Exclusiva para o ADMIN/FUNCIONARIO */}
             {(usuarioLogado?.perfil === "ADMIN" || usuarioLogado?.perfil === "FUNCIONARIO") && (
               <Link href="/admin" className="flex items-center gap-4 px-4 py-3 mt-2 rounded-lg border border-amber-900/30 bg-amber-950/20 text-amber-500 hover:bg-amber-900/40 transition-all">

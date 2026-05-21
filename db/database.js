@@ -41,6 +41,9 @@ const COLUNAS_CAMEL = {
     totalservicos: 'totalServicos', totalprodutos: 'totalProdutos',
     produtonome: 'produtoNome', marcanome: 'marcaNome', estoqueatual: 'estoqueAtual',
     quantidadevendida: 'quantidadeVendida', faturamentototal: 'faturamentoTotal',
+    formapagamento: 'formaPagamento', valorrecebido: 'valorRecebido',
+    totaldinheiro: 'totalDinheiro', totalcredito: 'totalCredito',
+    totaldebito: 'totalDebito', totalpix: 'totalPix',
 };
 
 function normalizarRow(row) {

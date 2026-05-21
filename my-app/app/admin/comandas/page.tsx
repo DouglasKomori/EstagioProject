@@ -61,6 +61,7 @@ export default function GerenciarComandas() {
 
   const [comandas, setComandas] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [caixaAberto, setCaixaAberto] = useState<boolean | null>(null);
 
   // Dados Base
   const [clientes, setClientes] = useState<any[]>([]);
@@ -122,6 +123,11 @@ export default function GerenciarComandas() {
   const [quantidade, setQuantidade] = useState(1);
   const [valorCobrado, setValorCobrado] = useState<number | "">("");
 
+  // Estados Modal Pagamento
+  const [modalPagamentoAberto, setModalPagamentoAberto] = useState(false);
+  const [formaPagamento, setFormaPagamento] = useState<"DINHEIRO" | "CREDITO" | "DEBITO" | "PIX" | "">("");
+  const [valorRecebido, setValorRecebido] = useState("");
+
   const obterToken = () => localStorage.getItem("token") || "";
 
   useEffect(() => {
@@ -158,17 +164,18 @@ export default function GerenciarComandas() {
   const carregarDadosBase = async () => {
     const headers = { "Authorization": `Bearer ${obterToken()}` };
     try {
-      const resCli = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario`, { headers });
+      const [resCli, resProf, resServ, resProd, resCaixa] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuario`, { headers }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/profissionais`, { headers }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos`, { headers }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/produtos`, { headers }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/caixas/status`, { headers }),
+      ]);
       if (resCli.ok) setClientes(await resCli.json());
-
-      const resProf = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/pessoas/profissionais`, { headers });
       if (resProf.ok) setProfissionais(await resProf.json());
-
-      const resServ = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/servicos`, { headers });
       if (resServ.ok) setServicos(await resServ.json());
-
-      const resProd = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/produtos`, { headers });
       if (resProd.ok) setProdutos(await resProd.json());
+      if (resCaixa.ok) { const d = await resCaixa.json(); setCaixaAberto(d.aberto); }
     } catch (e) { console.error("Erro base"); }
   };
 
@@ -304,26 +311,28 @@ export default function GerenciarComandas() {
 
   // 2. Fechar / Pagar a Conta
   const abrirModalFecharConta = () => {
-    setConfirmModal({
-      isOpen: true,
-      titulo: "Confirmar Pagamento?",
-      mensagem: `Deseja fechar esta conta e registrar o faturamento de R$ ${calcularTotal().toFixed(2)}?`,
-      tipo: "atencao", // Dourado
-      onConfirm: () => efetivarFechamento()
-    });
+    setFormaPagamento("");
+    setValorRecebido("");
+    setModalPagamentoAberto(true);
   };
 
   const efetivarFechamento = async () => {
-    setConfirmModal({ ...confirmModal, isOpen: false });
+    setModalPagamentoAberto(false);
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/${comandaAtual.id}/finalizar`, { method: "PUT", headers: { "Authorization": `Bearer ${obterToken()}` } });
-      if (res.ok) { 
-        exibirSucesso("Comanda fechada e paga com sucesso!"); 
-        setModalDetalhesAberto(false); 
-        carregarComandasAbertas(); 
+      const body: Record<string, unknown> = { formaPagamento };
+      if (formaPagamento === 'DINHEIRO') body.valorRecebido = Number(valorRecebido);
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/${comandaAtual.id}/finalizar`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${obterToken()}` },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        exibirSucesso("Comanda fechada e paga com sucesso!");
+        setModalDetalhesAberto(false);
+        carregarComandasAbertas();
       } else {
-        // Captura o erro real do Back-end (Ex: "Abra o caixa do dia...")
         const data = await res.json();
         exibirErroDetalhes(data.msg || "Não foi possível fechar a conta.");
       }
@@ -393,13 +402,31 @@ export default function GerenciarComandas() {
           </button>
           <button
             id="tour-abrir-comanda"
-            onClick={() => { setModalNovaAberto(true); setBuscaCliente(""); setClienteId(""); }}
-            className="px-6 py-2 bg-[#E4B77D] text-black font-bold rounded-md hover:bg-[#cfa56d] transition-colors shadow-lg"
+            onClick={() => {
+              if (caixaAberto === false) { exibirErroPrincipal("O caixa precisa estar aberto antes de iniciar uma comanda. Acesse Fluxo de Caixa e abra o caixa do dia."); return; }
+              setModalNovaAberto(true); setBuscaCliente(""); setClienteId("");
+            }}
+            className={`px-6 py-2 font-bold rounded-md transition-colors shadow-lg ${caixaAberto === false ? "bg-zinc-700 text-zinc-400 cursor-not-allowed" : "bg-[#E4B77D] text-black hover:bg-[#cfa56d]"}`}
           >
             + Abrir Comanda
           </button>
         </div>
       </header>
+
+      {/* AVISO: CAIXA FECHADO */}
+      {caixaAberto === false && (
+        <div className="max-w-6xl mx-auto mt-4 bg-amber-950/50 border border-amber-800/60 text-amber-400 p-4 rounded-lg flex items-center gap-3 animate-in fade-in duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="shrink-0">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span className="font-medium text-sm flex-1">
+            O caixa do dia está fechado. Abra o caixa antes de iniciar novas comandas.
+          </span>
+          <Link href="/admin/caixa" className="text-xs font-bold text-amber-300 hover:text-white transition-colors whitespace-nowrap border border-amber-700/50 px-3 py-1.5 rounded-lg hover:bg-amber-800/30">
+            Abrir Caixa →
+          </Link>
+        </div>
+      )}
 
       {/* FEEDBACKS DA TELA PRINCIPAL */}
       {sucesso && (
@@ -664,8 +691,105 @@ export default function GerenciarComandas() {
         </div>
       )}
 
+      {/* MODAL: FORMA DE PAGAMENTO */}
+      {modalPagamentoAberto && comandaAtual && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setModalPagamentoAberto(false)} />
+          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-sm p-6 relative z-10 shadow-2xl animate-in zoom-in-95 duration-200">
+
+            <h2 className="text-xl font-bold text-white mb-1">Confirmar Pagamento</h2>
+            <p className="text-zinc-500 text-sm mb-5">Ficha #{comandaAtual.numero_comanda} — {comandaAtual.clienteNome}</p>
+
+            {/* Total */}
+            <div className="flex justify-between items-center bg-zinc-900 rounded-xl px-4 py-3 mb-6">
+              <span className="text-sm text-zinc-400 font-medium">Total a Pagar</span>
+              <span className="text-3xl font-black text-[#E4B77D]">R$ {calcularTotal().toFixed(2)}</span>
+            </div>
+
+            {/* Forma de pagamento */}
+            <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3">Forma de Pagamento</p>
+            <div className="grid grid-cols-2 gap-2 mb-5">
+              {([
+                { key: "DINHEIRO", label: "Dinheiro" },
+                { key: "PIX",      label: "PIX" },
+                { key: "CREDITO",  label: "Crédito" },
+                { key: "DEBITO",   label: "Débito" },
+              ] as const).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => { setFormaPagamento(key); setValorRecebido(""); }}
+                  className={`py-3 rounded-xl font-bold text-sm border transition-all ${
+                    formaPagamento === key
+                      ? "bg-[#E4B77D] text-black border-[#E4B77D] shadow-[0_0_20px_rgba(228,183,125,0.2)]"
+                      : "bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-600"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Campo de troco — só dinheiro */}
+            {formaPagamento === "DINHEIRO" && (
+              <div className="mb-5 space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">
+                    Valor Recebido (R$)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    autoFocus
+                    value={valorRecebido}
+                    onChange={(e) => setValorRecebido(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white text-2xl font-black focus:outline-none focus:border-[#E4B77D] transition-colors"
+                    placeholder={calcularTotal().toFixed(2)}
+                  />
+                </div>
+                {Number(valorRecebido) > 0 && Number(valorRecebido) < calcularTotal() && (
+                  <div className="bg-red-950/50 border border-red-900/50 rounded-xl px-4 py-3 text-red-400 text-sm text-center font-medium">
+                    Valor insuficiente — faltam R$ {(calcularTotal() - Number(valorRecebido)).toFixed(2)}
+                  </div>
+                )}
+                {Number(valorRecebido) >= calcularTotal() && Number(valorRecebido) > 0 && (
+                  <div className="flex justify-between items-center bg-green-950/40 border border-green-900/50 rounded-xl px-4 py-3">
+                    <span className="text-sm text-green-400 font-medium">Troco</span>
+                    <span className="text-xl font-black text-green-400">
+                      R$ {(Number(valorRecebido) - calcularTotal()).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Botões */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModalPagamentoAberto(false)}
+                className="flex-1 py-3 border border-zinc-700 text-zinc-400 rounded-xl font-bold hover:bg-zinc-900 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={efetivarFechamento}
+                disabled={
+                  !formaPagamento ||
+                  loading ||
+                  (formaPagamento === "DINHEIRO" && (
+                    !valorRecebido || Number(valorRecebido) < calcularTotal()
+                  ))
+                }
+                className="flex-[2] py-3 bg-[#E4B77D] text-black font-extrabold rounded-xl hover:bg-[#cfa56d] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loading ? "Finalizando..." : "Finalizar Pagamento"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="relative z-[999]">
-        <ConfirmModal 
+        <ConfirmModal
           isOpen={confirmModal.isOpen}
           titulo={confirmModal.titulo}
           mensagem={confirmModal.mensagem}

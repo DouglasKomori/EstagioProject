@@ -98,9 +98,9 @@ export default class ComandaRepository {
         };
     }
 
-    async fecharComanda(idComanda, caixaId) {
-        let sql = "UPDATE comanda SET status = 'PAGA', dataFechamento = NOW(), caixaId = ? WHERE id = ?";
-        return await this.#banco.ExecutaComandoNonQuery(sql, [caixaId, idComanda]);
+    async fecharComanda(idComanda, caixaId, formaPagamento, valorRecebido, troco) {
+        let sql = "UPDATE comanda SET status = 'PAGA', dataFechamento = NOW(), caixaId = ?, forma_pagamento = ?, valor_recebido = ?, troco = ? WHERE id = ?";
+        return await this.#banco.ExecutaComandoNonQuery(sql, [caixaId, formaPagamento, valorRecebido, troco, idComanda]);
     }
 
     async listarAbertas() {
@@ -115,13 +115,31 @@ export default class ComandaRepository {
     }
 
     async removerServico(idItem) {
+        let sqlGet = "SELECT comandaId FROM comanda_servico WHERE id = ?";
+        let rows = await this.#banco.ExecutaComando(sqlGet, [idItem]);
+        const comandaId = rows.length > 0 ? rows[0].comandaId : null;
         let sql = "DELETE FROM comanda_servico WHERE id = ?";
-        return await this.#banco.ExecutaComandoNonQuery(sql, [idItem]);
+        const success = await this.#banco.ExecutaComandoNonQuery(sql, [idItem]);
+        return { success, comandaId };
     }
 
     async removerProduto(idItem) {
+        let sqlGet = "SELECT comandaId FROM comanda_produto WHERE id = ?";
+        let rows = await this.#banco.ExecutaComando(sqlGet, [idItem]);
+        const comandaId = rows.length > 0 ? rows[0].comandaId : null;
         let sql = "DELETE FROM comanda_produto WHERE id = ?";
-        return await this.#banco.ExecutaComandoNonQuery(sql, [idItem]);
+        const success = await this.#banco.ExecutaComandoNonQuery(sql, [idItem]);
+        return { success, comandaId };
+    }
+
+    async buscarAbertaPorClienteId(clienteId) {
+        let sql = `
+            SELECT c.id FROM comanda c
+            WHERE c.clienteId = ? AND c.status = 'ABERTA'
+            ORDER BY c.dataAbertura DESC LIMIT 1`;
+        let rows = await this.#banco.ExecutaComando(sql, [clienteId]);
+        if (rows.length === 0) return null;
+        return this.consultarDetalhes(rows[0].id);
     }
     
     async cancelar(idComanda) {

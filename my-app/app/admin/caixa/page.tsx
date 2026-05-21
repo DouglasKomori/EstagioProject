@@ -535,6 +535,28 @@ export default function GestaoCaixa() {
                     <p className="text-xl font-mono text-emerald-400 font-bold">+ {fmt(resumo?.faturamento || 0)}</p>
                   </div>
                 </div>
+
+                {/* Breakdown por forma de pagamento */}
+                {resumo?.formasPagamento && (
+                  <div className="mt-6 pt-6 border-t border-zinc-800">
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Recebido por Forma de Pagamento</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        { label: "Dinheiro", valor: resumo.formasPagamento.totalDinheiro, cor: "text-emerald-400" },
+                        { label: "PIX",      valor: resumo.formasPagamento.totalPix,      cor: "text-sky-400" },
+                        { label: "Crédito",  valor: resumo.formasPagamento.totalCredito,  cor: "text-violet-400" },
+                        { label: "Débito",   valor: resumo.formasPagamento.totalDebito,   cor: "text-amber-400" },
+                      ].map(({ label, valor, cor }) => (
+                        <div key={label} className="bg-zinc-950/60 border border-zinc-800 rounded-xl px-3 py-3">
+                          <p className="text-[10px] font-bold text-zinc-600 uppercase mb-1">{label}</p>
+                          <p className={`text-sm font-bold font-mono ${Number(valor) > 0 ? cor : "text-zinc-700"}`}>
+                            {fmt(valor || 0)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* CARD: STATUS + AÇÕES */}
@@ -833,6 +855,28 @@ export default function GestaoCaixa() {
                               </div>
                             )}
 
+                            {/* Formas de pagamento do dia */}
+                            {historicoDetalheDados.formasPagamento && (
+                              <div>
+                                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Formas de Pagamento</p>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                  {[
+                                    { label: "Dinheiro", valor: historicoDetalheDados.formasPagamento.totalDinheiro, cor: "text-emerald-400" },
+                                    { label: "PIX",      valor: historicoDetalheDados.formasPagamento.totalPix,      cor: "text-sky-400" },
+                                    { label: "Crédito",  valor: historicoDetalheDados.formasPagamento.totalCredito,  cor: "text-violet-400" },
+                                    { label: "Débito",   valor: historicoDetalheDados.formasPagamento.totalDebito,   cor: "text-amber-400" },
+                                  ].map(({ label, valor, cor }) => (
+                                    <div key={label} className="flex items-center justify-between bg-zinc-900/60 rounded-lg px-3 py-2">
+                                      <span className="text-xs text-zinc-500">{label}</span>
+                                      <span className={`text-xs font-bold font-mono ${Number(valor) > 0 ? cor : "text-zinc-700"}`}>
+                                        {fmt(valor || 0)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
                             {/* Sem detalhes */}
                             {(!historicoDetalheDados.servicos || historicoDetalheDados.servicos.length === 0) &&
                              (!historicoDetalheDados.produtos || historicoDetalheDados.produtos.length === 0) && (
@@ -901,10 +945,33 @@ export default function GestaoCaixa() {
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">Fechar Expediente?</h2>
-            <p className="text-zinc-400 text-sm mb-8">
+            <p className="text-zinc-400 text-sm mb-6">
               O saldo final de <strong className="text-white">{fmt(resumo?.saldoFinalEsperado || 0)}</strong> será
               registrado e o caixa será encerrado.
             </p>
+
+            {/* Breakdown de formas de pagamento */}
+            {resumo?.formasPagamento && (
+              <div className="mb-6 text-left">
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Formas de Pagamento Recebidas</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "Dinheiro", valor: resumo.formasPagamento.totalDinheiro, cor: "text-emerald-400", bg: "bg-emerald-950/30 border-emerald-900/30" },
+                    { label: "PIX",      valor: resumo.formasPagamento.totalPix,      cor: "text-sky-400",     bg: "bg-sky-950/30 border-sky-900/30" },
+                    { label: "Crédito",  valor: resumo.formasPagamento.totalCredito,  cor: "text-violet-400",  bg: "bg-violet-950/30 border-violet-900/30" },
+                    { label: "Débito",   valor: resumo.formasPagamento.totalDebito,   cor: "text-amber-400",   bg: "bg-amber-950/30 border-amber-900/30" },
+                  ].map(({ label, valor, cor, bg }) => (
+                    <div key={label} className={`border rounded-xl px-3 py-3 ${Number(valor) > 0 ? bg : "bg-zinc-900/40 border-zinc-800"}`}>
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase mb-1">{label}</p>
+                      <p className={`text-sm font-bold font-mono ${Number(valor) > 0 ? cor : "text-zinc-700"}`}>
+                        {fmt(valor || 0)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col gap-3">
               <button onClick={confirmarFechamento}
                 className="w-full py-4 bg-red-500 text-white font-black rounded-2xl hover:bg-red-600 transition-all">

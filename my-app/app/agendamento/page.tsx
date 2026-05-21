@@ -8,7 +8,7 @@ type TourPosicao = "bottom" | "top" | "left";
 const TOUR_STEPS: { targetId: string; titulo: string; descricao: string; posicao: TourPosicao }[] = [
   { targetId: "tour-meus-horarios", titulo: "Meus Agendamentos", descricao: "Aqui ficam todos os seus próximos horários marcados. Você pode cancelar um agendamento com até 2 horas de antecedência.", posicao: "bottom" },
   { targetId: "tour-barbeiro", titulo: "Escolha o Barbeiro", descricao: "Selecione com qual profissional deseja se atender. Ao escolher o barbeiro, os horários disponíveis são carregados automaticamente.", posicao: "bottom" },
-  { targetId: "tour-servicos", titulo: "Escolha os Serviços", descricao: "Selecione um ou mais serviços que deseja realizar. O valor total e o tempo estimado são calculados automaticamente.", posicao: "bottom" },
+  { targetId: "tour-servicos", titulo: "Escolha o Serviço", descricao: "Selecione o serviço que deseja realizar. O valor e o tempo estimado são exibidos automaticamente.", posicao: "bottom" },
   { targetId: "tour-dia", titulo: "Escolha o Dia", descricao: "Navegue pelo calendário e clique no dia desejado. Dias passados ficam desabilitados. O barbeiro precisa estar selecionado para ver os horários.", posicao: "bottom" },
   { targetId: "tour-horario", titulo: "Escolha o Horário", descricao: "Selecione um horário disponível. Horários riscados já estão ocupados ou são do passado. Os slots são gerados a partir da escala de trabalho do barbeiro.", posicao: "top" },
   { targetId: "tour-resumo", titulo: "Confirmar Agendamento", descricao: "Veja o resumo com o valor total e o tempo estimado. Quando tudo estiver preenchido, clique em 'Confirmar Agendamento' para finalizar.", posicao: "top" },
@@ -88,7 +88,7 @@ export default function AgendamentoCliente() {
   const [dataVisualizacao, setDataVisualizacao] = useState(new Date());
   const [horaSelecionada, setHoraSelecionada] = useState("");
   const [profissionalSelecionado, setProfissionalSelecionado] = useState("");
-  const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([]);
+  const [servicoSelecionado, setServicoSelecionado] = useState<number | null>(null);
   const [observacao, setObservacao] = useState("");
   const [erroForm, setErroForm] = useState("");
 
@@ -218,27 +218,17 @@ export default function AgendamentoCliente() {
     }
   };
 
-  const handleCheckboxServico = (idServico: number, checked: boolean) => {
-    if (checked) setServicosSelecionados([...servicosSelecionados, idServico]);
-    else setServicosSelecionados(servicosSelecionados.filter(id => id !== idServico));
-  };
-
   const calcularTempoEValor = () => {
-    return servicosSelecionados.reduce((acc, idServico) => {
-      const servico = listaServicos.find(s => s.id === idServico);
-      if (servico) {
-        acc.tempo += servico.tempoEstimadoMinutos || 0;
-        acc.valor += Number(servico.valor) || 0;
-      }
-      return acc;
-    }, { tempo: 0, valor: 0 });
+    const servico = listaServicos.find(s => s.id === servicoSelecionado);
+    if (!servico) return { tempo: 0, valor: 0 };
+    return { tempo: servico.tempoEstimadoMinutos || 0, valor: Number(servico.valor) || 0 };
   };
 
   const salvarAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
     setErroForm("");
-    if (!horaSelecionada || !profissionalSelecionado || servicosSelecionados.length === 0) {
-      setErroForm("Preencha todos os campos obrigatórios (Profissional, Serviços e Horário).");
+    if (!horaSelecionada || !profissionalSelecionado || !servicoSelecionado) {
+      setErroForm("Preencha todos os campos obrigatórios (Profissional, Serviço e Horário).");
       return;
     }
     const usuarioData = JSON.parse(localStorage.getItem("usuario") || "{}");
@@ -251,7 +241,7 @@ export default function AgendamentoCliente() {
       clienteId: usuarioData.id,
       profissionalId: Number(profissionalSelecionado),
       observacao: observacao,
-      servicos: servicosSelecionados.map(id => ({ id }))
+      servicos: [{ id: servicoSelecionado }]
     };
     setLoading(true);
     try {
@@ -264,7 +254,7 @@ export default function AgendamentoCliente() {
       if (response.ok) {
         exibirSucesso("Agendamento realizado com sucesso! Te esperamos na barbearia.");
         setHoraSelecionada("");
-        setServicosSelecionados([]);
+        setServicoSelecionado(null);
         setObservacao("");
         carregarDadosIniciais();
         buscarEscalaEHorariosOcupados();
@@ -530,26 +520,34 @@ export default function AgendamentoCliente() {
 
                 <div id="tour-servicos">
                   <label className="block text-[10px] font-bold text-[#E4B77D] mb-3 uppercase tracking-[0.25em]">
-                    2. Serviços
+                    2. Serviço
                   </label>
                   <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 max-h-40 overflow-y-auto custom-scrollbar flex flex-col gap-1">
-                    {listaServicos.map(serv => (
-                      <label
-                        key={serv.id}
-                        className="flex items-center justify-between cursor-pointer px-3 py-2 hover:bg-zinc-900 rounded-lg transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            checked={servicosSelecionados.includes(serv.id)}
-                            onChange={(e) => handleCheckboxServico(serv.id, e.target.checked)}
-                            className="w-4 h-4 accent-[#E4B77D] rounded"
-                          />
-                          <span className="text-zinc-200 text-sm">{serv.nome}</span>
-                        </div>
-                        <span className="text-[#E4B77D] text-xs font-semibold">R$ {Number(serv.valor).toFixed(2)}</span>
-                      </label>
-                    ))}
+                    {listaServicos.map(serv => {
+                      const selecionado = servicoSelecionado === serv.id;
+                      return (
+                        <button
+                          key={serv.id}
+                          type="button"
+                          onClick={() => setServicoSelecionado(selecionado ? null : serv.id)}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg transition-all text-left border ${
+                            selecionado
+                              ? "bg-[#E4B77D]/10 border-[#E4B77D]/40 text-white"
+                              : "border-transparent hover:bg-zinc-900 text-zinc-300"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                              selecionado ? "border-[#E4B77D] bg-[#E4B77D]" : "border-zinc-600"
+                            }`}>
+                              {selecionado && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                            </div>
+                            <span className="text-sm">{serv.nome}</span>
+                          </div>
+                          <span className="text-[#E4B77D] text-xs font-semibold shrink-0 ml-2">R$ {Number(serv.valor).toFixed(2)}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
