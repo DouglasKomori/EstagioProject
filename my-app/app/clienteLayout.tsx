@@ -155,12 +155,20 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               Olá, <strong className="text-[#E4B77D] font-medium">{usuarioLogado.nome.split(" ")[0]}</strong>
             </span>
 
-            <Link 
-              href={usuarioLogado.perfil !== "CLIENTE" ? "/admin" : "/agendamento"} 
+            <Link
+              href={usuarioLogado.perfil !== "CLIENTE" ? "/admin" : "/agendamento"}
               className="px-4 py-2 text-sm font-bold bg-[#E4B77D] text-black rounded-md hover:bg-[#cfa56d] transition-colors"
             >
               {usuarioLogado.perfil !== "CLIENTE" ? "Meu Painel" : "Meus Agendamentos"}
             </Link>
+            {usuarioLogado.perfil === "CLIENTE" && (
+              <Link
+                href="/minha-comanda"
+                className="px-4 py-2 text-sm font-bold border border-[#E4B77D] text-[#E4B77D] rounded-md hover:bg-[#E4B77D] hover:text-black transition-colors"
+              >
+                Minha Comanda
+              </Link>
+            )}
             <button 
               onClick={handleLogout} 
               className="px-3 py-2 text-sm font-medium text-red-500 hover:text-red-400 transition-colors"

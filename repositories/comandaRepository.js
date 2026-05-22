@@ -123,12 +123,19 @@ export default class ComandaRepository {
         return { success, comandaId };
     }
 
-    async removerProduto(idItem) {
-        let sqlGet = "SELECT comandaId FROM comanda_produto WHERE id = ?";
+    async removerProduto(idItem, quantidadeRemover) {
+        let sqlGet = "SELECT comandaId, quantidade FROM comanda_produto WHERE id = ?";
         let rows = await this.#banco.ExecutaComando(sqlGet, [idItem]);
-        const comandaId = rows.length > 0 ? rows[0].comandaId : null;
-        let sql = "DELETE FROM comanda_produto WHERE id = ?";
-        const success = await this.#banco.ExecutaComandoNonQuery(sql, [idItem]);
+        if (rows.length === 0) return { success: false, comandaId: null };
+        const { comandaId, quantidade } = rows[0];
+        const qtdRemover = quantidadeRemover ? Number(quantidadeRemover) : Number(quantidade);
+        const novaQtd = Number(quantidade) - qtdRemover;
+        let success;
+        if (novaQtd <= 0) {
+            success = await this.#banco.ExecutaComandoNonQuery("DELETE FROM comanda_produto WHERE id = ?", [idItem]);
+        } else {
+            success = await this.#banco.ExecutaComandoNonQuery("UPDATE comanda_produto SET quantidade = ? WHERE id = ?", [novaQtd, idItem]);
+        }
         return { success, comandaId };
     }
 

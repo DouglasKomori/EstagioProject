@@ -128,6 +128,10 @@ export default function GerenciarComandas() {
   const [formaPagamento, setFormaPagamento] = useState<"DINHEIRO" | "CREDITO" | "DEBITO" | "PIX" | "">("");
   const [valorRecebido, setValorRecebido] = useState("");
 
+  // Estados Modal Remover Produto (com quantidade)
+  const [modalRemoverProduto, setModalRemoverProduto] = useState<{ aberto: boolean; produto: any }>({ aberto: false, produto: null });
+  const [qtdRemover, setQtdRemover] = useState(1);
+
   const obterToken = () => localStorage.getItem("token") || "";
 
   useEffect(() => {
@@ -283,21 +287,28 @@ export default function GerenciarComandas() {
 
 
   // 1. Remover Item da Comanda
-  const abrirModalRemoverItem = (tipo: "SERVICO" | "PRODUTO", idInterno: number) => {
-    setConfirmModal({
-      isOpen: true,
-      titulo: "Remover Item?",
-      mensagem: "Tem certeza que deseja remover este item da ficha?",
-      tipo: "perigo", // Vermelho
-      onConfirm: () => efetivarRemocaoItem(tipo, idInterno)
-    });
+  const abrirModalRemoverItem = (tipo: "SERVICO" | "PRODUTO", item: any) => {
+    if (tipo === "SERVICO") {
+      setConfirmModal({
+        isOpen: true,
+        titulo: "Remover Serviço?",
+        mensagem: `Tem certeza que deseja remover "${item.servicoNome}" da ficha?`,
+        tipo: "perigo",
+        onConfirm: () => efetivarRemocaoItem("SERVICO", item.id)
+      });
+    } else {
+      setQtdRemover(1);
+      setModalRemoverProduto({ aberto: true, produto: item });
+    }
   };
 
-  const efetivarRemocaoItem = async (tipo: "SERVICO" | "PRODUTO", idInterno: number) => {
+  const efetivarRemocaoItem = async (tipo: "SERVICO" | "PRODUTO", idInterno: number, quantidade?: number) => {
     setConfirmModal({ ...confirmModal, isOpen: false });
+    setModalRemoverProduto({ aberto: false, produto: null });
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/remover-item/${tipo}/${idInterno}`, { method: "DELETE", headers: { "Authorization": `Bearer ${obterToken()}` } });
+      const qs = tipo === "PRODUTO" && quantidade ? `?quantidade=${quantidade}` : "";
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/comandas/remover-item/${tipo}/${idInterno}${qs}`, { method: "DELETE", headers: { "Authorization": `Bearer ${obterToken()}` } });
       if (res.ok) {
         abrirDetalhes(comandaAtual.id);
         exibirSucessoDetalhes("Item removido!");
@@ -663,7 +674,7 @@ export default function GerenciarComandas() {
                         <div><p className="text-zinc-200 text-sm font-medium">{s.servicoNome}</p><p className="text-zinc-500 text-xs">Por: {s.profissionalNome}</p></div>
                         <div className="flex items-center gap-3">
                           <span className="text-zinc-400 font-mono text-sm">R$ {Number(s.valorCobrado).toFixed(2)}</span>
-                          <button onClick={() => abrirModalRemoverItem("SERVICO", s.id)} className="text-zinc-700 hover:text-red-500 transition-colors p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                          <button onClick={() => abrirModalRemoverItem("SERVICO", s)} className="text-zinc-700 hover:text-red-500 transition-colors p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
                         </div>
                       </div>
                     ))}
@@ -672,7 +683,7 @@ export default function GerenciarComandas() {
                         <div><p className="text-zinc-200 text-sm font-medium">{p.quantidade}x {p.produtoNome}</p></div>
                         <div className="flex items-center gap-3">
                           <span className="text-zinc-400 font-mono text-sm">R$ {(Number(p.valorCobrado) * Number(p.quantidade)).toFixed(2)}</span>
-                          <button onClick={() => abrirModalRemoverItem("PRODUTO", p.id)} className="text-zinc-700 hover:text-red-500 transition-colors p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                          <button onClick={() => abrirModalRemoverItem("PRODUTO", p)} className="text-zinc-700 hover:text-red-500 transition-colors p-1"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
                         </div>
                       </div>
                     ))}
@@ -782,6 +793,53 @@ export default function GerenciarComandas() {
                 className="flex-[2] py-3 bg-[#E4B77D] text-black font-extrabold rounded-xl hover:bg-[#cfa56d] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loading ? "Finalizando..." : "Finalizar Pagamento"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: REMOVER PRODUTO COM QUANTIDADE */}
+      {modalRemoverProduto.aberto && modalRemoverProduto.produto && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setModalRemoverProduto({ aberto: false, produto: null })} />
+          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-xs p-6 relative z-10 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-bold text-white mb-1">Remover Produto</h2>
+            <p className="text-zinc-400 text-sm mb-1">
+              <span className="text-white font-medium">{modalRemoverProduto.produto.produtoNome}</span>
+            </p>
+            <p className="text-zinc-500 text-xs mb-5">
+              Quantidade atual: <span className="text-[#E4B77D] font-bold">{modalRemoverProduto.produto.quantidade}</span>
+            </p>
+
+            <label className="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">
+              Quantas unidades remover?
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={modalRemoverProduto.produto.quantidade}
+              value={qtdRemover}
+              onChange={(e) => setQtdRemover(Math.min(Number(e.target.value), modalRemoverProduto.produto.quantidade))}
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white text-2xl font-black focus:outline-none focus:border-red-500 transition-colors mb-2"
+            />
+            {qtdRemover >= modalRemoverProduto.produto.quantidade && (
+              <p className="text-xs text-red-400 mb-3">O item será removido completamente da ficha.</p>
+            )}
+
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setModalRemoverProduto({ aberto: false, produto: null })}
+                className="flex-1 py-3 border border-zinc-700 text-zinc-400 rounded-xl font-bold hover:bg-zinc-900 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => efetivarRemocaoItem("PRODUTO", modalRemoverProduto.produto.id, qtdRemover)}
+                disabled={loading || qtdRemover < 1}
+                className="flex-[2] py-3 bg-red-700 text-white font-extrabold rounded-xl hover:bg-red-600 transition-colors disabled:opacity-40"
+              >
+                {loading ? "Removendo..." : "Confirmar Remoção"}
               </button>
             </div>
           </div>

@@ -180,12 +180,13 @@ export default class ComandaController {
     async removerItem(req, res) {
         try {
             let { tipo, id } = req.params;
+            let { quantidade } = req.query;
 
             let result;
             if (tipo.toUpperCase() === 'SERVICO') {
                 result = await this.#repo.removerServico(id);
             } else {
-                result = await this.#repo.removerProduto(id);
+                result = await this.#repo.removerProduto(id, quantidade);
             }
 
             if (result.success) {

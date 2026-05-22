@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import UsuarioRepository from '../repositories/usuarioRepository.js';
 
-const SECRET = "BARBERUEMATSU";
+const SECRET = process.env.JWT_SECRET;
 
 export default class AuthMiddleware {
 
