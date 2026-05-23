@@ -452,7 +452,7 @@ export default function AgendamentoCliente() {
       const dataDesteDia = new Date(ano, mes, i);
       const isSelecionado = dataDesteDia.toDateString() === dataSelecionada.toDateString();
       const isPassado = dataDesteDia < hoje;
-      const semEscala = profissionalSelecionado && disponibilidades.length > 0 && !diasComEscala.has(dataDesteDia.getDay());
+      const semEscala = !!(profissionalSelecionado && disponibilidades.length > 0 && !diasComEscala.has(dataDesteDia.getDay()));
       const isDesabilitado = isPassado || semEscala;
       dias.push(
         <button
