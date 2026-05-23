@@ -353,8 +353,14 @@ export default function MinhaComanda() {
                 </button>
               </div>
             ) : (
-              <div className="text-center py-8 text-zinc-500 text-sm">
-                Não foi possível gerar o QR Code. Verifique se o servidor está configurado.
+              <div className="flex flex-col items-center gap-4 py-6">
+                <p className="text-zinc-500 text-sm text-center">Não foi possível gerar o QR Code.</p>
+                <button
+                  onClick={abrirModalPix}
+                  className="px-5 py-2.5 bg-zinc-900 border border-zinc-700 text-zinc-300 rounded-xl font-bold text-sm hover:bg-zinc-800 hover:text-white transition-colors"
+                >
+                  Tentar novamente
+                </button>
               </div>
             )}
           </div>

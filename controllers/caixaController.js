@@ -80,11 +80,18 @@ export default class CaixaController {
             const caixa = await this.#repo.buscarCaixaAberto();
             if (!caixa) return res.status(400).json({ msg: "Não há caixa aberto." });
 
+            const comandasAbertas = await this.#repo.contarComandasAbertas();
+            if (comandasAbertas > 0) {
+                return res.status(400).json({
+                    msg: `Existem ${comandasAbertas} comanda(s) ainda em aberto. Finalize ou cancele todas antes de fechar o caixa.`
+                });
+            }
+
             const faturamento = await this.#repo.calcularFaturamento(caixa.id);
             const saldoFinalEsperado = Number(caixa.saldoInicial) + Number(faturamento);
 
             const result = await this.#repo.fechar(caixa.id, saldoFinalEsperado);
-            
+
             if (result) return res.status(200).json({ msg: "Caixa fechado com sucesso! Bom descanso." });
             else return res.status(400).json({ msg: "Erro ao tentar fechar o caixa." });
         } catch (exception) {

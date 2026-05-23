@@ -1,5 +1,6 @@
 import AgendamentoRepository from "../repositories/agendamentoRepository.js";
-import BloqueioRepository from "../repositories/bloqueioRepository.js"; 
+import BloqueioRepository from "../repositories/bloqueioRepository.js";
+import { enviarConfirmacaoAgendamento } from "../services/emailService.js";
 
 export default class AgendamentoController {
     #repo;
@@ -56,11 +57,34 @@ export default class AgendamentoController {
                 return res.status(400).json({msg: "O profissional selecionado possui um bloqueio de agenda (imprevisto/ausência) neste horário."});
             }
 
-            const result = await this.#repo.cadastrar({
+            const agendamentoId = await this.#repo.cadastrar({
                 dataHora, clienteId, profissionalId, status: "AGENDADO", observacao, servicos
             });
-            
-            if(result){
+
+            if(agendamentoId){
+                // Envia e-mail de confirmação sem bloquear a resposta
+                this.#repo.buscarDetalhesParaEmail(agendamentoId).then(detalhes => {
+                    if (!detalhes) {
+                        console.warn('[Email] Detalhes do agendamento não encontrados para o ID:', agendamentoId);
+                        return;
+                    }
+                    if (!detalhes.clienteEmail) {
+                        console.warn('[Email] Cliente sem e-mail cadastrado. ID agendamento:', agendamentoId);
+                        return;
+                    }
+                    console.log('[Email] Enviando para:', detalhes.clienteEmail);
+                    enviarConfirmacaoAgendamento(detalhes.clienteEmail, {
+                        nomeCliente: detalhes.clienteNome,
+                        dataHora: detalhes.dataHora,
+                        servicos: detalhes.nomesServicos || "Serviço",
+                        profissional: detalhes.profissionalNome,
+                    }).then(() => {
+                        console.log('[Email] Enviado com sucesso para:', detalhes.clienteEmail);
+                    }).catch(err => {
+                        console.error('[Email] Falha no envio. Destinatário:', detalhes.clienteEmail, '| Erro:', err?.message || err);
+                    });
+                }).catch(err => console.error('[Email] Erro ao buscar detalhes do agendamento:', err));
+
                 return res.status(201).json({msg: "Agendamento realizado com sucesso!"});
             } else {
                 return res.status(400).json({msg: "Não foi possível realizar o agendamento!"});
@@ -128,22 +152,71 @@ export default class AgendamentoController {
 
     async listarMeusAgendamentos(req, res) {
         try {
-            const clienteId = req.usuarioLogado.id; 
-
-            if (!clienteId) {
-                return res.status(401).json({ msg: "Sessão expirada. Faça login novamente." });
-            }
-
+            const clienteId = req.usuarioLogado.id;
+            if (!clienteId) return res.status(401).json({ msg: "Sessão expirada. Faça login novamente." });
             const lista = await this.#repo.listarPorCliente(clienteId);
-            
-            if (lista && lista.length > 0) {
-                return res.status(200).json(lista);
-            } else {
-                return res.status(404).json({ msg: "Você ainda não tem agendamentos." });
-            }
+            if (lista && lista.length > 0) return res.status(200).json(lista);
+            else return res.status(404).json({ msg: "Você ainda não tem agendamentos." });
         } catch (exception) {
             console.error("Erro ao listar agendamentos do cliente:", exception);
             return res.status(500).json({ msg: "Erro interno ao buscar seus agendamentos." });
+        }
+    }
+
+    async reagendar(req, res) {
+        try {
+            const id = req.params.id;
+            const { dataHora } = req.body;
+            const usuarioLogado = req.usuarioLogado;
+
+            if (!dataHora) return res.status(400).json({ msg: "Informe a nova data e hora." });
+
+            // Valida que o horário está no padrão de 30 em 30 minutos (:00 ou :30)
+            const novaData = new Date(dataHora);
+            const minutos = novaData.getMinutes();
+            if (minutos !== 0 && minutos !== 30) {
+                return res.status(400).json({ msg: "O horário deve ser em ponto ou meia hora (ex: 14:00 ou 14:30)." });
+            }
+
+            const agendamento = await this.#repo.buscarPorId(id);
+            if (!agendamento) return res.status(404).json({ msg: "Agendamento não encontrado." });
+
+            if (usuarioLogado.perfil === 'CLIENTE' && agendamento.clienteId !== usuarioLogado.id) {
+                return res.status(403).json({ msg: "Acesso negado." });
+            }
+
+            const agora = new Date();
+            const horaAgendamento = new Date(agendamento.dataHora);
+            if ((horaAgendamento - agora) / (1000 * 60) < 120) {
+                return res.status(403).json({ msg: "Reagendamento só é permitido com 2h de antecedência." });
+            }
+
+            // Verifica se o novo horário já está ocupado por outro cliente
+            const temConflito = await this.#repo.verificarConflitoHorario(
+                agendamento.profissionalId, dataHora, Number(id)
+            );
+            if (temConflito) {
+                return res.status(409).json({ msg: "Este horário já está ocupado com outro cliente. Escolha um horário diferente." });
+            }
+
+            const result = await this.#repo.reagendar(id, dataHora);
+            if (result) return res.status(200).json({ msg: "Agendamento reagendado com sucesso!" });
+            else return res.status(400).json({ msg: "Não foi possível reagendar." });
+        } catch (exception) {
+            console.error(exception);
+            return res.status(500).json({ msg: "Erro ao reagendar." });
+        }
+    }
+
+    async listarHistoricoCliente(req, res) {
+        try {
+            const clienteId = req.usuarioLogado.id;
+            if (!clienteId) return res.status(401).json({ msg: "Sessão expirada. Faça login novamente." });
+            const lista = await this.#repo.listarHistoricoPorCliente(clienteId);
+            return res.status(200).json(lista || []);
+        } catch (exception) {
+            console.error("Erro ao listar histórico:", exception);
+            return res.status(500).json({ msg: "Erro interno ao buscar histórico." });
         }
     }
 

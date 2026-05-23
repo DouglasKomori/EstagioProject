@@ -6,6 +6,12 @@ const router = express.Router();
 const auth = new AuthMiddleware();
 const ctrl = new ServicosController();
 
+router.get("/publico", (req,res) => {
+    // #swagger.tags = ['Servicos - CLIENTE']
+    // #swagger.summary = "Lista os serviços ativos publicamente (sem autenticação)"
+    ctrl.listar(req,res);
+});
+
 router.get("/", auth.validarToken, (req,res) => {
     /* #swagger.security = [{
     "bearerAuth": []

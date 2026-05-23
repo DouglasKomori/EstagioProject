@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -9,6 +9,8 @@ type Tela = "login" | "esqueci_email" | "esqueci_codigo" | "sucesso";
 
 export default function Login() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get("returnUrl") || "/";
   const [animado, setAnimado] = useState(false);
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function Login() {
         if (data.usuario.perfil === "ADMIN" || data.usuario.perfil === "FUNCIONARIO") {
           router.push("/admin");
         } else {
-          router.push("/");
+          router.push(returnUrl);
         }
       } else {
         setErro(data.msg || "Erro ao fazer login. Verifique suas credenciais.");

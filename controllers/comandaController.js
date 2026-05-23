@@ -24,6 +24,11 @@ export default class ComandaController {
                 return res.status(400).json({ msg: `A comanda n.º ${numero_comanda} já está em uso!` });
             }
 
+            const clienteJaTemComanda = await this.#repo.buscarAbertaPorClienteId(clienteId);
+            if (clienteJaTemComanda) {
+                return res.status(400).json({ msg: "Este cliente já possui uma comanda aberta. Finalize a ficha anterior antes de abrir uma nova." });
+            }
+
             const result = await this.#repo.abrir({ numero_comanda, clienteId });
             if (result) return res.status(201).json({ msg: "Comanda aberta com sucesso!" });
             else return res.status(400).json({ msg: "Erro ao abrir comanda." });

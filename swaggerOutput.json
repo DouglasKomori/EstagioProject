@@ -526,6 +526,35 @@
         }
       }
     },
+    "/servicos/publico": {
+      "get": {
+        "tags": [
+          "Servicos - CLIENTE"
+        ],
+        "summary": "Lista os serviços ativos publicamente (sem autenticação)",
+        "description": "",
+        "parameters": [
+          {
+            "name": "inativos",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
     "/servicos/": {
       "get": {
         "tags": [
@@ -2098,7 +2127,6 @@
         "tags": [
           "Agendas - CLIENTE"
         ],
-        "summary": "Lista as Agendas do usuário logado",
         "description": "",
         "parameters": [
           {
@@ -2118,6 +2146,39 @@
           },
           "404": {
             "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/agendamentos/meus/historico": {
+      "get": {
+        "tags": [
+          "Agendas - CLIENTE"
+        ],
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
           },
           "500": {
             "description": "Internal Server Error"
@@ -2419,10 +2480,6 @@
     },
     "/agendamentos/{id}/cancelar": {
       "put": {
-        "tags": [
-          "Agendas - FUNCIONARIO"
-        ],
-        "summary": "Cancela uma Agenda (Inativa o agendamento)",
         "description": "",
         "parameters": [
           {
@@ -2463,6 +2520,70 @@
             "bearerAuth": []
           }
         ]
+      }
+    },
+    "/agendamentos/{id}/reagendar": {
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "dataHora": {
+                    "example": "any"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/bloqueios/": {
@@ -3336,6 +3457,13 @@
             "name": "id",
             "in": "path",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quantidade",
+            "in": "query",
             "schema": {
               "type": "string"
             }

@@ -90,6 +90,8 @@ export default function GerenciarComandas() {
   const [filtroPeriodo, setFiltroPeriodo] = useState("HOJE");
   const [filtroProfissional, setFiltroProfissional] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("");
+  const [filtroInicio, setFiltroInicio] = useState("");
+  const [filtroFim, setFiltroFim] = useState("");
 
   // Estados Modal Nova Comanda
   const [modalNovaAberto, setModalNovaAberto] = useState(false);
@@ -140,8 +142,11 @@ export default function GerenciarComandas() {
 
   useEffect(() => {
     if (abaAtual === "ABERTAS") carregarComandasAbertas();
-    else if (abaAtual === "RELATORIO") carregarRelatorio();
-  }, [abaAtual, filtroPeriodo, filtroProfissional, filtroTipo]);
+    else if (abaAtual === "RELATORIO") {
+      if (filtroPeriodo === "PERSONALIZADO" && (!filtroInicio || !filtroFim)) return;
+      carregarRelatorio();
+    }
+  }, [abaAtual, filtroPeriodo, filtroProfissional, filtroTipo, filtroInicio, filtroFim]);
 
   // === FUNÇÕES DE TEMPORIZADOR DOS AVISOS ===
   const exibirSucesso = (mensagem: string) => {
@@ -205,6 +210,9 @@ export default function GerenciarComandas() {
     } else if (filtroPeriodo === "30DIAS") {
       const trintaDiasAtras = new Date(hojeDate.setDate(hojeDate.getDate() - 30));
       dataInicio = trintaDiasAtras.toISOString().split('T')[0];
+    } else if (filtroPeriodo === "PERSONALIZADO" && filtroInicio && filtroFim) {
+      dataInicio = filtroInicio;
+      dataFim = filtroFim;
     }
 
     let url = `${process.env.NEXT_PUBLIC_API_URL}/comandas/relatorio/faturamento?`;
@@ -501,7 +509,27 @@ export default function GerenciarComandas() {
                 <option value="7DIAS">Últimos 7 Dias</option>
                 <option value="30DIAS">Últimos 30 Dias</option>
                 <option value="TUDO">Todo o Período</option>
+                <option value="PERSONALIZADO">Personalizado</option>
               </select>
+
+              {filtroPeriodo === "PERSONALIZADO" && (
+                <>
+                  <input
+                    type="date"
+                    value={filtroInicio}
+                    onChange={e => setFiltroInicio(e.target.value)}
+                    className="bg-zinc-950 border border-zinc-800 text-white rounded-lg p-3 outline-none focus:border-[#E4B77D] w-full md:w-40"
+                  />
+                  <span className="text-zinc-500 self-center hidden md:block">até</span>
+                  <input
+                    type="date"
+                    value={filtroFim}
+                    min={filtroInicio}
+                    onChange={e => setFiltroFim(e.target.value)}
+                    className="bg-zinc-950 border border-zinc-800 text-white rounded-lg p-3 outline-none focus:border-[#E4B77D] w-full md:w-40"
+                  />
+                </>
+              )}
 
               <select
                 value={filtroTipo}
@@ -547,8 +575,8 @@ export default function GerenciarComandas() {
                 {relatorio.length === 0 ? (
                   <tr><td colSpan={5} className="p-8 text-center text-zinc-500 italic">Nenhum serviço faturado neste período.</td></tr>
                 ) : (
-                  relatorio.map(item => (
-                    <tr key={item.comandaId + item.servicoNome} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
+                  relatorio.map((item, idx) => (
+                    <tr key={`${item.comandaId}-${item.tipo}-${idx}`} className="border-b border-zinc-800/50 hover:bg-zinc-800/30 transition-colors">
                       <td className="p-4 text-zinc-400">{new Date(item.dataFechamento).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit', timeZone: 'America/Sao_Paulo' })}</td>
                       <td className="p-4"><span className="text-[#E4B77D] font-bold mr-2">#{item.numero_comanda}</span> {item.clienteNome}</td>
                       <td className="p-4 font-medium text-zinc-200 flex items-center gap-2">

@@ -308,6 +308,29 @@ export default function RelatorioAgenda() {
     return new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
   };
 
+  const exportarCSV = () => {
+    if (relatorio.length === 0) return;
+    // Força o Excel a tratar o valor como texto simples usando o prefixo ="..."
+    const txt = (val: string) => `="${String(val).replace(/"/g, '""')}"`;
+    const cabecalho = ["Data/Hora", "Cliente", "Telefone", "Servicos", "Profissional", "Status"];
+    const linhas = relatorio.map(ag => [
+      txt(`${formatarData(ag.dataHora)} ${formatarHora(ag.dataHora)}`),
+      txt(ag.clienteNome || ""),
+      txt(ag.clienteTelefone || ""),
+      txt(ag.servicos || ""),
+      txt(ag.profissionalNome || ""),
+      txt(ag.status || ""),
+    ]);
+    const csv = [cabecalho, ...linhas].map(r => r.join(";")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `agenda_${filtroDataInicio}_${filtroDataFim}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Badge de status
   const statusStyle: Record<string, string> = {
     AGENDADO:  "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -381,6 +404,15 @@ export default function RelatorioAgenda() {
             <button onClick={iniciarTour} className="px-4 py-2 bg-zinc-800 text-[#E4B77D] font-bold rounded-md hover:bg-zinc-700 transition-all border border-[#E4B77D]/30 hover:border-[#E4B77D]/70 flex items-center gap-2 text-sm">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               ? Ajuda
+            </button>
+            <button
+              onClick={exportarCSV}
+              disabled={relatorio.length === 0}
+              className="px-5 py-2 bg-zinc-800 text-emerald-400 font-bold rounded-md hover:bg-zinc-700 transition-colors border border-zinc-700 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Exportar para CSV (abre no Excel)"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              Exportar CSV
             </button>
             <button id="tour-imprimir" onClick={() => window.print()} className="px-6 py-2 bg-zinc-800 text-white font-bold rounded-md hover:bg-zinc-700 transition-colors border border-zinc-700 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>

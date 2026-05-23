@@ -45,6 +45,25 @@ export default class AgendamentoRepository {
         return await this.#banco.ExecutaComando(sql, [clienteId]);
     }
 
+    async listarHistoricoPorCliente(clienteId) {
+        let sql = `
+            SELECT a.*,
+                   p.nome as profissionalNome,
+                   string_agg(s.nome, ' + ') as nomesServicos
+            FROM agendamento a
+            INNER JOIN pessoa p ON a.profissionalId = p.id
+            LEFT JOIN agendamento_servico aserv ON a.id = aserv.agendamentoId
+            LEFT JOIN servico s ON aserv.servicoId = s.id
+            WHERE a.clienteId = ?
+              AND a.ativo = 1
+              AND a.dataHora <= NOW() - INTERVAL '3 hours'
+            GROUP BY a.id, p.nome
+            ORDER BY a.dataHora DESC
+            LIMIT 30
+        `;
+        return await this.#banco.ExecutaComando(sql, [clienteId]);
+    }
+
     async listarHorariosOcupados(profissionalId, dataInicio, dataFim) {
         let sql = `
             SELECT 
@@ -78,7 +97,7 @@ export default class AgendamentoRepository {
             }
 
             await this.#banco.Commit();
-            return true;
+            return agendamentoId;
         } catch (error) {
             await this.#banco.Rollback();
             throw error;
@@ -91,9 +110,44 @@ export default class AgendamentoRepository {
         return result;
     }
 
+    async reagendar(id, novaDataHora) {
+        let sql = "UPDATE agendamento SET dataHora = ? WHERE id = ? AND status = 'AGENDADO' AND ativo = 1";
+        return await this.#banco.ExecutaComandoNonQuery(sql, [novaDataHora, id]);
+    }
+
     async buscarPorId(id) {
         const sql = "SELECT * FROM agendamento WHERE id = ?";
         const rows = await this.#banco.ExecutaComando(sql, [id]);
+        return rows.length > 0 ? rows[0] : null;
+    }
+
+    async verificarConflitoHorario(profissionalId, dataHora, excludeId) {
+        const sql = `
+            SELECT COUNT(*) as total FROM agendamento
+            WHERE profissionalId = ?
+              AND dataHora = ?
+              AND status = 'AGENDADO'
+              AND ativo = 1
+              AND id != ?
+        `;
+        const rows = await this.#banco.ExecutaComando(sql, [profissionalId, dataHora, excludeId]);
+        return Number(rows[0].total) > 0;
+    }
+
+    async buscarDetalhesParaEmail(agendamentoId) {
+        const sql = `
+            SELECT a.dataHora, c.nome as clienteNome, c.email as clienteEmail,
+                   p.nome as profissionalNome,
+                   string_agg(s.nome, ' + ') as nomesServicos
+            FROM agendamento a
+            INNER JOIN cliente c ON a.clienteId = c.id
+            INNER JOIN pessoa p ON a.profissionalId = p.id
+            LEFT JOIN agendamento_servico aserv ON a.id = aserv.agendamentoId
+            LEFT JOIN servico s ON aserv.servicoId = s.id
+            WHERE a.id = ?
+            GROUP BY a.id, a.dataHora, c.nome, c.email, p.nome
+        `;
+        const rows = await this.#banco.ExecutaComando(sql, [agendamentoId]);
         return rows.length > 0 ? rows[0] : null;
     }
 

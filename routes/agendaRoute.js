@@ -7,12 +7,15 @@ const auth = new AuthMiddleware();
 const ctrl = new AgendaController();
 
 router.get("/meus", auth.validarToken, (req,res) => {
-    /* #swagger.security = [{
-    "bearerAuth": []
-    }] */
+    /* #swagger.security = [{"bearerAuth": []}] */
     // #swagger.tags = ['Agendas - CLIENTE']
-    // #swagger.summary = "Lista as Agendas do usuário logado"
     ctrl.listarMeusAgendamentos(req,res);
+});
+
+router.get("/meus/historico", auth.validarToken, (req,res) => {
+    /* #swagger.security = [{"bearerAuth": []}] */
+    // #swagger.tags = ['Agendas - CLIENTE']
+    ctrl.listarHistoricoCliente(req,res);
 });
 
 router.get("/", auth.validarFuncionario, (req,res) => {
@@ -62,13 +65,13 @@ router.put("/:id/status", auth.validarFuncionario, (req,res) => {
 });
 
 router.put("/:id/cancelar", auth.validarToken, (req,res) => {
-    /* #swagger.security = [{
-    "bearerAuth": []
-    }] */
-    // #swagger.tags = ['Agendas - FUNCIONARIO']
-    // #swagger.summary = "Cancela uma Agenda (Inativa o agendamento)"
+    /* #swagger.security = [{"bearerAuth": []}] */
     ctrl.cancelar(req,res);
 });
 
+router.put("/:id/reagendar", auth.validarToken, (req,res) => {
+    /* #swagger.security = [{"bearerAuth": []}] */
+    ctrl.reagendar(req,res);
+});
 
 export default router;

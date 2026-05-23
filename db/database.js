@@ -33,7 +33,7 @@ const COLUNAS_CAMEL = {
     datahora: 'dataHora', clienteid: 'clienteId', servicoid: 'servicoId',
     agendamentoid: 'agendamentoId', caixaid: 'caixaId', comandaid: 'comandaId',
     produtoid: 'produtoId', valorcobrado: 'valorCobrado', datamovimentacao: 'dataMovimentacao',
-    profissionalnome: 'profissionalNome', clientenome: 'clienteNome', clientetelefone: 'clienteTelefone',
+    profissionalnome: 'profissionalNome', clientenome: 'clienteNome', clientetelefone: 'clienteTelefone', clienteemail: 'clienteEmail',
     nomesservicos: 'nomesServicos', serviconome: 'servicoNome', receitatotal: 'receitaTotal',
     ticketmedio: 'ticketMedio', primeiraocorrencia: 'primeiraOcorrencia', ultimaocorrencia: 'ultimaOcorrencia',
     totalservicosdistintos: 'totalServicosDistintos', totalexecucoes: 'totalExecucoes',

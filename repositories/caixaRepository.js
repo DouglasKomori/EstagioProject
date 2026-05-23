@@ -39,6 +39,12 @@ export default class CaixaRepository {
         return Number(resServicos[0].totalServicos) + Number(resProdutos[0].totalProdutos);
     }
 
+    async contarComandasAbertas() {
+        let sql = "SELECT COUNT(*) as total FROM comanda WHERE status = 'ABERTA'";
+        let rows = await this.#banco.ExecutaComando(sql);
+        return Number(rows[0].total);
+    }
+
     async fechar(idCaixa, saldoFinalCalculado) {
         let sql = "UPDATE caixa SET status = 'FECHADO', dataFechamento = NOW(), saldoFinal = ? WHERE id = ?";
         return await this.#banco.ExecutaComandoNonQuery(sql, [saldoFinalCalculado, idCaixa]);

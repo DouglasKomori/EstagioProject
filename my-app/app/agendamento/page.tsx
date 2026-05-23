@@ -54,6 +54,22 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
   );
 }
 
+function gerarSlotsParaDia(disps: any[], diaSemana: number): string[] {
+  const turnos = disps.filter(d => d.diaSemana === diaSemana);
+  const slots: string[] = [];
+  turnos.forEach(turno => {
+    let [hI, mI] = turno.horaInicio.split(':').map(Number);
+    let [hF, mF] = turno.horaFim.split(':').map(Number);
+    let atual = hI * 60 + mI;
+    const fim = hF * 60 + mF;
+    while (atual < fim) {
+      slots.push(`${String(Math.floor(atual / 60)).padStart(2, '0')}:${String(atual % 60).padStart(2, '0')}`);
+      atual += 30;
+    }
+  });
+  return [...new Set(slots)].sort();
+}
+
 export default function AgendamentoCliente() {
   const router = useRouter();
 
@@ -64,6 +80,8 @@ export default function AgendamentoCliente() {
   const irParaPasso = useCallback((novo: number) => { setTourEntrando(true); setTimeout(() => { setTourPasso(novo); setTimeout(() => setTourEntrando(false), 50); }, 150); }, []);
 
   const [meusAgendamentos, setMeusAgendamentos] = useState<any[]>([]);
+  const [historicoAgendamentos, setHistoricoAgendamentos] = useState<any[]>([]);
+  const [abaAgendamentos, setAbaAgendamentos] = useState<"proximos" | "historico">("proximos");
   const [listaProfissionais, setListaProfissionais] = useState<any[]>([]);
   const [listaServicos, setListaServicos] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -84,11 +102,20 @@ export default function AgendamentoCliente() {
   const [disponibilidades, setDisponibilidades] = useState<any[]>([]);
   const [horariosDinamicos, setHorariosDinamicos] = useState<string[]>([]);
 
+  // Reagendamento
+  const [modalReagendar, setModalReagendar] = useState<{ aberto: boolean; agendamento: any }>({ aberto: false, agendamento: null });
+  const [reagendaData, setReagendaData] = useState("");
+  const [reagendaHora, setReagendaHora] = useState("");
+  const [reagendaDisponibilidades, setReagendaDisponibilidades] = useState<any[]>([]);
+  const [reagendaSlots, setReagendaSlots] = useState<string[]>([]);
+  const [reagendaLoadingSlots, setReagendaLoadingSlots] = useState(false);
+  const [reagendaErro, setReagendaErro] = useState("");
+
   const [dataSelecionada, setDataSelecionada] = useState(new Date());
   const [dataVisualizacao, setDataVisualizacao] = useState(new Date());
   const [horaSelecionada, setHoraSelecionada] = useState("");
   const [profissionalSelecionado, setProfissionalSelecionado] = useState("");
-  const [servicoSelecionado, setServicoSelecionado] = useState<number | null>(null);
+  const [servicosSelecionados, setServicosSelecionados] = useState<number[]>([]);
   const [observacao, setObservacao] = useState("");
   const [erroForm, setErroForm] = useState("");
 
@@ -104,6 +131,23 @@ export default function AgendamentoCliente() {
     carregarDadosIniciais();
   }, []);
 
+  // Carrega a escala completa do barbeiro quando ele é selecionado (para pintar o calendário)
+  useEffect(() => {
+    if (profissionalSelecionado) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/disponibilidade?profissionalId=${profissionalSelecionado}`, {
+        headers: { "Authorization": `Bearer ${obterToken()}` }
+      })
+        .then(r => r.ok ? r.json() : [])
+        .then(disp => setDisponibilidades(disp))
+        .catch(() => {});
+    } else {
+      setDisponibilidades([]);
+      setHorariosOcupados([]);
+      setHorariosDinamicos([]);
+    }
+  }, [profissionalSelecionado]);
+
+  // Carrega horários do dia selecionado quando muda o dia ou o barbeiro
   useEffect(() => {
     if (profissionalSelecionado) {
       buscarEscalaEHorariosOcupados();
@@ -133,6 +177,10 @@ export default function AgendamentoCliente() {
       if (resServicos.ok) setListaServicos(await resServicos.json());
       const resAgendamentos = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/meus`, { headers });
       if (resAgendamentos.ok) setMeusAgendamentos(await resAgendamentos.json());
+      else setMeusAgendamentos([]);
+      const resHistorico = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/meus/historico`, { headers });
+      if (resHistorico.ok) setHistoricoAgendamentos(await resHistorico.json());
+      else setHistoricoAgendamentos([]);
     } catch (error) { console.error("Erro ao carregar dados", error); }
     finally { setLoading(false); }
   };
@@ -165,9 +213,10 @@ export default function AgendamentoCliente() {
     turnosDoDia.forEach(turno => {
       let [hInicio, mInicio] = turno.horaInicio.split(':').map(Number);
       let [hFim, mFim] = turno.horaFim.split(':').map(Number);
-      let dataAtual = new Date();
+      // Usa a data de referência real em vez de hoje
+      let dataAtual = new Date(dataReferencia);
       dataAtual.setHours(hInicio, mInicio, 0, 0);
-      let dataFimTurno = new Date();
+      let dataFimTurno = new Date(dataReferencia);
       dataFimTurno.setHours(hFim, mFim, 0, 0);
       while (dataAtual < dataFimTurno) {
         slotsGerados.push(dataAtual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
@@ -176,6 +225,21 @@ export default function AgendamentoCliente() {
     });
     setHorariosDinamicos([...new Set(slotsGerados)].sort());
     setHoraSelecionada("");
+  };
+
+  // Verifica se o slot selecionado + duração do serviço cabe sem conflito
+  const slotConflitaComServico = (slot: string, duracaoMinutos: number): boolean => {
+    if (!duracaoMinutos || duracaoMinutos <= 30) return false;
+    const blocosNecessarios = Math.ceil(duracaoMinutos / 30);
+    const [h, m] = slot.split(':').map(Number);
+    for (let i = 1; i < blocosNecessarios; i++) {
+      const proxMinutos = h * 60 + m + i * 30;
+      const ph = String(Math.floor(proxMinutos / 60)).padStart(2, '0');
+      const pm = String(proxMinutos % 60).padStart(2, '0');
+      const proxSlot = `${ph}:${pm}`;
+      if (horariosOcupados.includes(proxSlot) || !horariosDinamicos.includes(proxSlot)) return true;
+    }
+    return false;
   };
 
   const verificarPodeCancelar = (dataHoraISO: string) => {
@@ -193,6 +257,95 @@ export default function AgendamentoCliente() {
       tipo: "perigo",
       onConfirm: () => efetivarCancelamento(id)
     });
+  };
+
+  const fecharModalReagendar = () => {
+    setModalReagendar({ aberto: false, agendamento: null });
+    setReagendaData("");
+    setReagendaHora("");
+    setReagendaErro("");
+    setReagendaSlots([]);
+    setReagendaDisponibilidades([]);
+  };
+
+  const abrirModalReagendar = async (ag: any) => {
+    setReagendaData("");
+    setReagendaHora("");
+    setReagendaErro("");
+    setReagendaSlots([]);
+    setModalReagendar({ aberto: true, agendamento: ag });
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/disponibilidade?profissionalId=${ag.profissionalId}`,
+        { headers: { Authorization: `Bearer ${obterToken()}` } }
+      );
+      if (res.ok) setReagendaDisponibilidades(await res.json());
+    } catch { /* disponibilidades ficam vazias */ }
+  };
+
+  const selecionarDataReagenda = async (data: string) => {
+    setReagendaData(data);
+    setReagendaHora("");
+    setReagendaErro("");
+    setReagendaSlots([]);
+    if (!data || !modalReagendar.agendamento) return;
+
+    const diaSemana = new Date(data + "T12:00:00").getDay();
+    const slotsBase = gerarSlotsParaDia(reagendaDisponibilidades, diaSemana);
+    if (slotsBase.length === 0) {
+      setReagendaErro("O profissional não atende neste dia da semana.");
+      return;
+    }
+
+    setReagendaLoadingSlots(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/agendamentos/ocupados?data=${data}&profissionalId=${modalReagendar.agendamento.profissionalId}`,
+        { headers: { Authorization: `Bearer ${obterToken()}` } }
+      );
+      const ocupados: string[] = res.ok ? await res.json() : [];
+      const hoje = new Date().toISOString().split("T")[0];
+      const agora = Date.now();
+      const disponiveis = slotsBase.filter(s => {
+        if (ocupados.includes(s)) return false;
+        if (data === hoje) {
+          const [h, m] = s.split(":").map(Number);
+          const slotMs = new Date().setHours(h, m, 0, 0);
+          if (slotMs <= agora + 2 * 60 * 60 * 1000) return false;
+        }
+        return true;
+      });
+      setReagendaSlots(disponiveis);
+    } catch {
+      setReagendaErro("Erro ao carregar horários disponíveis.");
+    } finally {
+      setReagendaLoadingSlots(false);
+    }
+  };
+
+  const efetivarReagendamento = async () => {
+    if (!reagendaData || !reagendaHora || !modalReagendar.agendamento) return;
+    setLoading(true);
+    const dataHoraFinal = `${reagendaData}T${reagendaHora}:00`;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/agendamentos/${modalReagendar.agendamento.id}/reagendar`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${obterToken()}` },
+        body: JSON.stringify({ dataHora: dataHoraFinal })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        exibirSucesso("Agendamento reagendado com sucesso!");
+        fecharModalReagendar();
+        carregarDadosIniciais();
+      } else {
+        setReagendaErro(data.msg || "Erro ao reagendar.");
+      }
+    } catch {
+      setReagendaErro("Erro de conexão.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const efetivarCancelamento = async (id: number) => {
@@ -218,17 +371,25 @@ export default function AgendamentoCliente() {
     }
   };
 
+  const toggleServico = (id: number) => {
+    setServicosSelecionados(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
+  };
+
   const calcularTempoEValor = () => {
-    const servico = listaServicos.find(s => s.id === servicoSelecionado);
-    if (!servico) return { tempo: 0, valor: 0 };
-    return { tempo: servico.tempoEstimadoMinutos || 0, valor: Number(servico.valor) || 0 };
+    const selecionados = listaServicos.filter(s => servicosSelecionados.includes(s.id));
+    return {
+      tempo: selecionados.reduce((acc, s) => acc + (s.tempoEstimadoMinutos || 0), 0),
+      valor: selecionados.reduce((acc, s) => acc + Number(s.valor), 0),
+    };
   };
 
   const salvarAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
     setErroForm("");
-    if (!horaSelecionada || !profissionalSelecionado || !servicoSelecionado) {
-      setErroForm("Preencha todos os campos obrigatórios (Profissional, Serviço e Horário).");
+    if (!horaSelecionada || !profissionalSelecionado || servicosSelecionados.length === 0) {
+      setErroForm("Preencha todos os campos obrigatórios (Profissional, pelo menos 1 Serviço e Horário).");
       return;
     }
     const usuarioData = JSON.parse(localStorage.getItem("usuario") || "{}");
@@ -241,7 +402,7 @@ export default function AgendamentoCliente() {
       clienteId: usuarioData.id,
       profissionalId: Number(profissionalSelecionado),
       observacao: observacao,
-      servicos: [{ id: servicoSelecionado }]
+      servicos: servicosSelecionados.map(id => ({ id }))
     };
     setLoading(true);
     try {
@@ -254,7 +415,7 @@ export default function AgendamentoCliente() {
       if (response.ok) {
         exibirSucesso("Agendamento realizado com sucesso! Te esperamos na barbearia.");
         setHoraSelecionada("");
-        setServicoSelecionado(null);
+        setServicosSelecionados([]);
         setObservacao("");
         carregarDadosIniciais();
         buscarEscalaEHorariosOcupados();
@@ -283,20 +444,25 @@ export default function AgendamentoCliente() {
     const totalDias = new Date(ano, mes + 1, 0).getDate();
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
+    // Dias da semana que o barbeiro atende (0=Dom, 6=Sáb)
+    const diasComEscala = new Set(disponibilidades.map((d: any) => d.diaSemana));
     const dias = [];
     for (let i = 0; i < primeiroDia; i++) dias.push(<div key={`empty-${i}`} className="w-10 h-10" />);
     for (let i = 1; i <= totalDias; i++) {
       const dataDesteDia = new Date(ano, mes, i);
       const isSelecionado = dataDesteDia.toDateString() === dataSelecionada.toDateString();
       const isPassado = dataDesteDia < hoje;
+      const semEscala = profissionalSelecionado && disponibilidades.length > 0 && !diasComEscala.has(dataDesteDia.getDay());
+      const isDesabilitado = isPassado || semEscala;
       dias.push(
         <button
           key={i}
           type="button"
-          disabled={isPassado}
+          disabled={isDesabilitado}
           onClick={() => setDataSelecionada(dataDesteDia)}
+          title={semEscala ? "Barbeiro não atende neste dia" : undefined}
           className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-medium transition-all mx-auto
-            ${isPassado ? "text-zinc-700 cursor-not-allowed"
+            ${isDesabilitado ? "text-zinc-800 cursor-not-allowed"
               : isSelecionado ? "bg-[#E4B77D] text-black shadow-lg shadow-[#E4B77D]/30 font-bold scale-110"
               : "text-zinc-300 hover:bg-zinc-800 hover:text-white"}
           `}
@@ -398,11 +564,45 @@ export default function AgendamentoCliente() {
         <section id="tour-meus-horarios" className="lg:col-span-5 flex flex-col gap-6">
           <div>
             <p className="text-[#E4B77D] text-xs font-bold tracking-[0.3em] uppercase mb-2">Sua Agenda</p>
-            <h2 className="text-2xl font-bold text-white">Próximos Horários</h2>
+            <h2 className="text-2xl font-bold text-white">Meus Horários</h2>
+          </div>
+
+          {/* Abas Próximos / Histórico */}
+          <div className="flex gap-1 bg-zinc-900 rounded-xl p-1">
+            <button
+              onClick={() => setAbaAgendamentos("proximos")}
+              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${abaAgendamentos === "proximos" ? "bg-zinc-800 text-[#E4B77D]" : "text-zinc-500 hover:text-zinc-300"}`}
+            >
+              Próximos
+            </button>
+            <button
+              onClick={() => setAbaAgendamentos("historico")}
+              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${abaAgendamentos === "historico" ? "bg-zinc-800 text-[#E4B77D]" : "text-zinc-500 hover:text-zinc-300"}`}
+            >
+              Histórico
+            </button>
           </div>
 
           <div className="flex flex-col gap-4">
-            {meusAgendamentos.length === 0 ? (
+            {abaAgendamentos === "historico" ? (
+              historicoAgendamentos.length === 0 ? (
+                <div className="border border-dashed border-zinc-800 rounded-2xl p-10 text-center">
+                  <p className="text-zinc-400 font-medium">Nenhum atendimento anterior</p>
+                  <p className="text-sm text-zinc-600 mt-1">Seu histórico aparece aqui após o primeiro corte.</p>
+                </div>
+              ) : (
+                historicoAgendamentos.map(ag => (
+                  <div key={ag.id} className="relative bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 shadow-lg overflow-hidden">
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${corStatus(ag.status)}`} />
+                    <div className="pl-4 flex flex-col gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-500">{ag.status}</span>
+                      <h3 className="text-base font-bold text-zinc-300">{formatarDataTela(ag.dataHora)}</h3>
+                      <p className="text-sm text-zinc-500">{ag.profissionalNome} · {ag.nomesServicos || "Serviço"}</p>
+                    </div>
+                  </div>
+                ))
+              )
+            ) : meusAgendamentos.length === 0 ? (
               <div className="border border-dashed border-zinc-800 rounded-2xl p-10 text-center">
                 <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4">
                   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="text-zinc-600">
@@ -453,16 +653,29 @@ export default function AgendamentoCliente() {
                       {ag.status === 'AGENDADO' && (
                         <div className="pt-3 border-t border-zinc-800/60">
                           {podeCancelar ? (
-                            <button
-                              onClick={() => abrirModalCancelar(ag.id)}
-                              disabled={loading}
-                              className="text-sm text-red-400/80 hover:text-red-400 font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                              Cancelar Agendamento
-                            </button>
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => abrirModalReagendar(ag)}
+                                disabled={loading}
+                                className="text-sm text-[#E4B77D]/70 hover:text-[#E4B77D] font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Reagendar
+                              </button>
+                              <span className="text-zinc-700">·</span>
+                              <button
+                                onClick={() => abrirModalCancelar(ag.id)}
+                                disabled={loading}
+                                className="text-sm text-red-400/80 hover:text-red-400 font-medium transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Cancelar
+                              </button>
+                            </div>
                           ) : (
                             <p className="text-xs text-zinc-600 italic flex items-center gap-1.5">
                               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -477,7 +690,7 @@ export default function AgendamentoCliente() {
                   </div>
                 );
               })
-            )}
+            ) /* fim aba proximos */ }
           </div>
         </section>
 
@@ -520,16 +733,16 @@ export default function AgendamentoCliente() {
 
                 <div id="tour-servicos">
                   <label className="block text-[10px] font-bold text-[#E4B77D] mb-3 uppercase tracking-[0.25em]">
-                    2. Serviço
+                    2. Serviços
                   </label>
                   <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 max-h-40 overflow-y-auto custom-scrollbar flex flex-col gap-1">
                     {listaServicos.map(serv => {
-                      const selecionado = servicoSelecionado === serv.id;
+                      const selecionado = servicosSelecionados.includes(serv.id);
                       return (
                         <button
                           key={serv.id}
                           type="button"
-                          onClick={() => setServicoSelecionado(selecionado ? null : serv.id)}
+                          onClick={() => toggleServico(serv.id)}
                           className={`flex items-center justify-between px-3 py-2 rounded-lg transition-all text-left border ${
                             selecionado
                               ? "bg-[#E4B77D]/10 border-[#E4B77D]/40 text-white"
@@ -537,10 +750,14 @@ export default function AgendamentoCliente() {
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            <div className={`w-4 h-4 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
                               selecionado ? "border-[#E4B77D] bg-[#E4B77D]" : "border-zinc-600"
                             }`}>
-                              {selecionado && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                              {selecionado && (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
                             </div>
                             <span className="text-sm">{serv.nome}</span>
                           </div>
@@ -676,6 +893,89 @@ export default function AgendamentoCliente() {
           </div>
         </section>
       </main>
+
+      {/* Modal Reagendamento */}
+      {modalReagendar.aberto && modalReagendar.agendamento && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={fecharModalReagendar} />
+          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-md p-6 relative z-10 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h2 className="text-lg font-bold text-white mb-1">Reagendar Horário</h2>
+            <p className="text-zinc-500 text-sm mb-5">
+              Atual: <span className="text-zinc-300">{formatarDataTela(modalReagendar.agendamento.dataHora)}</span>
+            </p>
+
+            {reagendaErro && (
+              <div className="mb-4 bg-red-950/40 border border-red-900/60 text-red-400 px-3 py-2.5 rounded-xl text-sm">
+                {reagendaErro}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-5 mb-6">
+              <div>
+                <label className="block text-[10px] font-bold text-[#E4B77D] uppercase tracking-[0.25em] mb-2">
+                  1. Nova Data
+                </label>
+                <input
+                  type="date"
+                  value={reagendaData}
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={e => selecionarDataReagenda(e.target.value)}
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#E4B77D] transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-[#E4B77D] uppercase tracking-[0.25em] mb-2">
+                  2. Horário Disponível
+                </label>
+                {!reagendaData ? (
+                  <div className="border border-dashed border-zinc-800 rounded-xl p-4 text-center text-zinc-600 text-sm">
+                    Selecione uma data primeiro
+                  </div>
+                ) : reagendaLoadingSlots ? (
+                  <div className="border border-zinc-800 rounded-xl p-4 text-center text-zinc-500 text-sm animate-pulse">
+                    Carregando horários...
+                  </div>
+                ) : reagendaSlots.length === 0 ? (
+                  <div className="border border-red-900/40 bg-red-950/20 rounded-xl p-4 text-center text-red-400 text-sm">
+                    Nenhum horário disponível neste dia
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                    {reagendaSlots.map(slot => (
+                      <button
+                        key={slot}
+                        type="button"
+                        onClick={() => setReagendaHora(slot)}
+                        className={`py-2.5 rounded-xl text-sm font-bold font-mono transition-all border
+                          ${reagendaHora === slot
+                            ? "bg-[#E4B77D] text-black border-[#E4B77D] shadow-lg shadow-[#E4B77D]/20"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-[#E4B77D]/40 hover:text-white"
+                          }`}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={fecharModalReagendar} className="flex-1 py-3 border border-zinc-700 text-zinc-400 rounded-xl font-bold hover:bg-zinc-900 transition-colors">
+                Cancelar
+              </button>
+              <button
+                onClick={efetivarReagendamento}
+                disabled={!reagendaData || !reagendaHora || loading}
+                className="flex-[2] py-3 bg-[#E4B77D] text-black font-extrabold rounded-xl hover:bg-[#cfa56d] transition-colors disabled:opacity-40"
+              >
+                {loading ? "Salvando..." : "Confirmar Reagendamento"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={confirmModal.isOpen}

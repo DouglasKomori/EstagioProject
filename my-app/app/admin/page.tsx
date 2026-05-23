@@ -102,6 +102,7 @@ function Tour({ passo, onProximo, onAnterior, onFechar, entrando }: TourProps) {
 
 export default function AdminDashboard() {
   const [nome, setNome] = useState("");
+  const [produtosEstoqueBaixo, setProdutosEstoqueBaixo] = useState<any[]>([]);
   const [tourAtivo, setTourAtivo] = useState(false);
   const [tourPasso, setTourPasso] = useState(0);
   const [tourEntrando, setTourEntrando] = useState(false);
@@ -111,6 +112,18 @@ export default function AdminDashboard() {
     if (usuarioString) {
       const usuario = JSON.parse(usuarioString);
       setNome(usuario.nome.split(" ")[0]);
+    }
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/produtos`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(r => r.ok ? r.json() : [])
+        .then((lista: any[]) => {
+          const criticos = lista.filter(p => p.ativo && p.quantidadeEstoque <= 3);
+          setProdutosEstoqueBaixo(criticos);
+        })
+        .catch(() => {});
     }
   }, []);
 
@@ -137,7 +150,26 @@ export default function AdminDashboard() {
       </header>
 
       <main className="max-w-6xl mx-auto space-y-10">
-        
+
+        {produtosEstoqueBaixo.length > 0 && (
+          <div className="bg-amber-950/40 border border-amber-800/60 rounded-xl p-4 flex items-start gap-3 animate-in fade-in duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="text-amber-400 shrink-0 mt-0.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-amber-400 font-bold text-sm mb-1">
+                {produtosEstoqueBaixo.length} produto{produtosEstoqueBaixo.length > 1 ? "s" : ""} com estoque crítico
+              </p>
+              <p className="text-amber-500/80 text-xs">
+                {produtosEstoqueBaixo.map(p => `${p.nome} (${p.quantidadeEstoque} un.)`).join(" · ")}
+              </p>
+            </div>
+            <Link href="/admin/produtos" className="text-xs font-bold text-amber-300 hover:text-white border border-amber-700/50 px-3 py-1.5 rounded-lg hover:bg-amber-800/30 transition-colors whitespace-nowrap">
+              Ver Produtos →
+            </Link>
+          </div>
+        )}
+
         <div>
           <h2 className="text-3xl font-extrabold mb-1">Olá, {nome || "Admin"}!</h2>
           <p className="text-zinc-400">Visão geral da Barbearia</p>
