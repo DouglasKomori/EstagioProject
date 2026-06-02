@@ -2,6 +2,7 @@ import AuthMiddleware from "../middlewares/authMiddleware.js";
 import UsuarioRepository from "../repositories/usuarioRepository.js";
 import CodigoVerificacaoRepository from "../repositories/codigoVerificacaoRepository.js";
 import { enviarCodigoVerificacao } from "../services/emailService.js";
+import bcrypt from 'bcryptjs';
 
 export default class AutenticacaoController {
 
@@ -15,10 +16,12 @@ export default class AutenticacaoController {
 
     async usuario(req, res) {
         try {
-            if(req.usuarioLogado)
-                return res.status(200).json(req.usuarioLogado);
-            else
+            if(req.usuarioLogado) {
+                const { senha: _, ...usuarioSemSenha } = req.usuarioLogado;
+                return res.status(200).json(usuarioSemSenha);
+            } else {
                 throw new Error("Erro ao obter o usuário!");
+            }
         }
         catch(ex) {
             console.log(ex);
@@ -31,14 +34,27 @@ export default class AutenticacaoController {
             let {email, senha} = req.body;
 
             if(email && senha) {
-                const crypto = await import('crypto');
-                const senhaHash = crypto.createHash('sha256').update(senha).digest('hex');
+                let usuario = await this.#usuarioRepository.buscarPorEmailComSenha(email);
 
-                let usuario = await this.#usuarioRepository.validarAcesso(email, senhaHash);
+                if (!usuario || !usuario.ativo) {
+                    return res.status(404).json({msg: "Email ou senha incorretos."});
+                }
 
-                if(usuario) {
+                let senhaValida = false;
+                if (usuario.senha.startsWith('$2')) {
+                    senhaValida = await bcrypt.compare(senha, usuario.senha);
+                } else {
+                    const crypto = await import('crypto');
+                    const senhaHash = crypto.createHash('sha256').update(senha).digest('hex');
+                    senhaValida = senhaHash === usuario.senha;
+                    if (senhaValida) {
+                        const novoHash = await bcrypt.hash(senha, 12);
+                        await this.#usuarioRepository.alterarSenha(usuario.id, novoHash);
+                    }
+                }
+
+                if(senhaValida) {
                     let auth = new AuthMiddleware();
-
                     let token = auth.gerarToken(
                         usuario.id,
                         usuario.email,
@@ -46,9 +62,10 @@ export default class AutenticacaoController {
                         usuario.telefone,
                         usuario.perfil
                     );
-
-                    res.cookie("token", token, { httpOnly: true });
-                    return res.status(200).json({token: token, usuario: usuario});
+                    const isProducao = process.env.NODE_ENV === 'production';
+                    res.cookie("token", token, { httpOnly: true, secure: isProducao, sameSite: 'strict' });
+                    const { senha: _, ...usuarioSemSenha } = usuario;
+                    return res.status(200).json({token: token, usuario: usuarioSemSenha});
                 }
                 else {
                     return res.status(404).json({msg: "Email ou senha incorretos."});
@@ -79,10 +96,8 @@ export default class AutenticacaoController {
 
             return res.status(200).json({ msg: "Código enviado! Verifique sua caixa de entrada." });
         } catch (ex) {
-            console.error("=== ERRO AO ENVIAR CÓDIGO ===");
-            console.error("Mensagem:", ex.message);
-            console.error("Stack:", ex.stack);
-            return res.status(500).json({ msg: `Erro interno: ${ex.message}` });
+            console.error("=== ERRO AO ENVIAR CÓDIGO ===", ex.message);
+            return res.status(500).json({ msg: "Erro ao enviar código. Tente novamente." });
         }
     }
 
@@ -105,8 +120,7 @@ export default class AutenticacaoController {
 
             await this.#codigoRepo.marcarUsado(codigoValido.id);
 
-            const crypto = await import('crypto');
-            const hash = crypto.createHash('sha256').update(novaSenha).digest('hex');
+            const hash = await bcrypt.hash(novaSenha, 12);
             await this.#usuarioRepository.alterarSenhaByEmail(email, hash);
 
             return res.status(200).json({ msg: "Senha redefinida com sucesso! Faça login com a nova senha." });

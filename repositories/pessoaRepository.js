@@ -116,15 +116,39 @@ export default class PessoaRepository {
     }
 
     async excluir(id) {
-        let sql = "UPDATE pessoa SET ativo = 0 WHERE id = ?";
-        let result = await this.#banco.ExecutaComandoNonQuery(sql, [id]);
-        return result;
+        try {
+            await this.#banco.AbreTransacao();
+            await this.#banco.ExecutaComandoNonQuery("UPDATE pessoa SET ativo = 0 WHERE id = ?", [id]);
+            await this.#banco.ExecutaComandoNonQuery(
+                `UPDATE cliente SET ativo = 0
+                 WHERE LOWER(email) = LOWER((SELECT email FROM pessoa WHERE id = ? AND email IS NOT NULL))
+                   AND perfil IN ('FUNCIONARIO', 'ADMIN')`,
+                [id]
+            );
+            await this.#banco.Commit();
+            return true;
+        } catch (error) {
+            await this.#banco.Rollback();
+            throw error;
+        }
     }
 
     async reativar(id) {
-        let sql = "UPDATE pessoa SET ativo = 1 WHERE id = ?";
-        let result = await this.#banco.ExecutaComandoNonQuery(sql, [id]);
-        return result;
+        try {
+            await this.#banco.AbreTransacao();
+            await this.#banco.ExecutaComandoNonQuery("UPDATE pessoa SET ativo = 1 WHERE id = ?", [id]);
+            await this.#banco.ExecutaComandoNonQuery(
+                `UPDATE cliente SET ativo = 1
+                 WHERE LOWER(email) = LOWER((SELECT email FROM pessoa WHERE id = ? AND email IS NOT NULL))
+                   AND perfil IN ('FUNCIONARIO', 'ADMIN')`,
+                [id]
+            );
+            await this.#banco.Commit();
+            return true;
+        } catch (error) {
+            await this.#banco.Rollback();
+            throw error;
+        }
     }
 
     async consultarPorId(id) {

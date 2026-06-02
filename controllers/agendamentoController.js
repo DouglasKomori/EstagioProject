@@ -129,14 +129,18 @@ export default class AgendamentoController {
             if (!agendamento) return res.status(404).json({ msg: "Agendamento não encontrado!" });
 
             if (usuarioLogado.perfil === 'CLIENTE') {
+                if (agendamento.clienteid !== usuarioLogado.id) {
+                    return res.status(403).json({ msg: "Acesso negado." });
+                }
+
                 const agora = new Date();
-                const horaAgendamento = new Date(agendamento.dataHora);
+                const horaAgendamento = new Date(agendamento.datahora);
 
                 const diferencaMinutos = (horaAgendamento - agora) / (1000 * 60);
 
                 if (diferencaMinutos < 120) {
-                    return res.status(403).json({ 
-                        msg: "Cancelamento permitido apenas com 2h de antecedência. Entre em contato com a barbearia." 
+                    return res.status(403).json({
+                        msg: "Cancelamento permitido apenas com 2h de antecedência. Entre em contato com a barbearia."
                     });
                 }
             }

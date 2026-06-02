@@ -8,12 +8,11 @@ export default class UsuarioRepository {
         this.#banco = new Database();
     }
 
-    async validarAcesso(email, senha) {
-        const sql = "select * from cliente where email = ? and senha = ? and ativo = 1";
-        const valores = [email, senha];
-        const row = await this.#banco.ExecutaComando(sql, valores);
-        if(row.length > 0) {
-            return this.toMap(row[0]);
+    async buscarPorEmailComSenha(email) {
+        const sql = "SELECT * FROM cliente WHERE LOWER(email) = LOWER(?) AND ativo = 1";
+        const rows = await this.#banco.ExecutaComando(sql, [email]);
+        if (rows.length > 0) {
+            return this.toMap(rows[0]);
         }
         return null;
     }

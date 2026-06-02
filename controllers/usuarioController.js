@@ -1,6 +1,6 @@
 import Usuario from '../entities/usuario.js';
 import UsuarioRepository from '../repositories/usuarioRepository.js';
-import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 export default class UsuarioController {
     #repository;
@@ -43,14 +43,13 @@ export default class UsuarioController {
                 return res.status(400).json({ erro: "Este email já está cadastrado por outro cliente." });
             }
 
-            const crypto = await import('crypto'); 
-            const senhaHash = crypto.createHash('sha256').update(senha).digest('hex');
+            const senhaHash = await bcrypt.hash(senha, 12);
 
             const usuario = new Usuario();
             usuario.nome = nome;
             usuario.email = email;
             usuario.senha = senhaHash;
-            usuario.telefone = telefone || null; 
+            usuario.telefone = telefone || null;
 
             const resultado = await this.#repository.cadastrar(usuario);
             
@@ -84,17 +83,16 @@ export default class UsuarioController {
                 return res.status(400).json({ erro: "Este e-mail já possui um acesso no sistema." });
             }
 
-            const crypto = await import('crypto'); 
-            const senhaHash = crypto.createHash('sha256').update(senha).digest('hex');
+            const senhaHash = await bcrypt.hash(senha, 12);
 
             const Usuario = (await import('../entities/usuario.js')).default;
             const usuario = new Usuario();
             usuario.nome = nome;
             usuario.email = email;
             usuario.senha = senhaHash;
-            usuario.telefone = telefone || null; 
-            
-            usuario.perfil = "FUNCIONARIO"; 
+            usuario.telefone = telefone || null;
+
+            usuario.perfil = "FUNCIONARIO";
 
             const resultado = await this.#repository.cadastrar(usuario);
             
@@ -194,7 +192,7 @@ export default class UsuarioController {
 
     async alterarSenha(req, res) {
         try {
-            let id = req.usuarioLogado.id; 
+            let id = req.usuarioLogado.id;
             let { senhaAtual, novaSenha } = req.body;
 
             if (!senhaAtual || !novaSenha) {
@@ -206,15 +204,19 @@ export default class UsuarioController {
                 return res.status(404).json({ msg: "Usuário não encontrado." });
             }
 
-            const crypto = await import('crypto');
+            let senhaAtualCorreta = false;
+            if (usuarioBanco.senha.startsWith('$2')) {
+                senhaAtualCorreta = await bcrypt.compare(senhaAtual, usuarioBanco.senha);
+            } else {
+                const crypto = await import('crypto');
+                senhaAtualCorreta = crypto.createHash('sha256').update(senhaAtual).digest('hex') === usuarioBanco.senha;
+            }
 
-            const hashSenhaAtualDigitada = crypto.createHash('sha256').update(senhaAtual).digest('hex');
-            
-            if (hashSenhaAtualDigitada !== usuarioBanco.senha) {
+            if (!senhaAtualCorreta) {
                 return res.status(400).json({ msg: "A senha atual está incorreta!" });
             }
 
-            const hashNovaSenha = crypto.createHash('sha256').update(novaSenha).digest('hex');
+            const hashNovaSenha = await bcrypt.hash(novaSenha, 12);
 
             const resultado = await this.#repository.alterarSenha(id, hashNovaSenha);
 

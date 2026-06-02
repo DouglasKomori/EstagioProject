@@ -12,10 +12,12 @@ export default function MovimentacaoEstoqueModal({ produto, onClose, onSuccess }
   const [quantidade, setQuantidade] = useState("");
   const [motivo, setMotivo] = useState("");
   const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErro("");
 
     const token = localStorage.getItem("token");
 
@@ -35,15 +37,14 @@ export default function MovimentacaoEstoqueModal({ produto, onClose, onSuccess }
       });
 
       if (res.ok) {
-        alert("Estoque atualizado com sucesso!");
         onSuccess();
         onClose();
       } else {
         const error = await res.json();
-        alert(error.msg || "Erro ao atualizar estoque.");
+        setErro(error.msg || "Erro ao atualizar estoque.");
       }
     } catch (err) {
-      alert("Erro de conexão com o servidor.");
+      setErro("Erro de conexão com o servidor.");
     } finally {
       setLoading(false);
     }
@@ -58,6 +59,14 @@ export default function MovimentacaoEstoqueModal({ produto, onClose, onSuccess }
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          {erro && (
+            <div className="bg-red-950/50 border border-red-900/70 text-red-400 text-sm p-3 rounded-xl flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="flex-shrink-0">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              {erro}
+            </div>
+          )}
           {/* Toggle de Tipo */}
           <div className="flex bg-zinc-900 p-1 rounded-xl border border-zinc-800">
             <button

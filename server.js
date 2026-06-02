@@ -6,6 +6,8 @@ import swaggerUi from 'swagger-ui-express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { createRequire } from 'module';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 import { setIo } from './socketManager.js';
 
@@ -36,8 +38,27 @@ const corsOptions = {
     origin: process.env.FRONTEND_URL || "http://localhost:3000"
 };
 
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { msg: "Muitas tentativas. Tente novamente em 15 minutos." }
+});
+
+const cadastroLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { msg: "Limite de cadastros atingido. Tente novamente em 1 hora." }
+});
+
+app.use(helmet({
+    contentSecurityPolicy: false
+}));
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
 // Socket.io
@@ -61,8 +82,8 @@ setIo(io);
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(outputJson));
 
-app.use("/usuario", usuarioRoute);
-app.use("/autenticacao", authRoute);
+app.use("/usuario", cadastroLimiter, usuarioRoute);
+app.use("/autenticacao", authLimiter, authRoute);
 app.use("/servicos", servicosRoute);
 app.use("/produtos", produtoRoute);
 app.use("/marcas", marcaRoute);
