@@ -111,7 +111,7 @@ export default function AdminDashboard() {
     const usuarioString = localStorage.getItem("usuario");
     if (usuarioString) {
       const usuario = JSON.parse(usuarioString);
-      setNome(usuario.nome.split(" ")[0]);
+      setNome(usuario?.nome?.split(" ")[0] ?? "");
     }
     const token = localStorage.getItem("token");
     if (token) {

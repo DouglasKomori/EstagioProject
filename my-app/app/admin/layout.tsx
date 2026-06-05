@@ -343,7 +343,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             Olá,{" "}
             <strong className="text-[#E4B77D] font-bold group-hover:underline
               underline-offset-4 decoration-[#E4B77D]">
-              {usuarioLogado?.nome.split(" ")[0]}
+              {usuarioLogado?.nome?.split(" ")[0] ?? ""}
             </strong>
           </Link>
 

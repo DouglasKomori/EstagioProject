@@ -159,7 +159,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <div className="flex items-center gap-4">
             
             <span className="text-sm text-zinc-400 hidden sm:block">
-              Olá, <strong className="text-[#E4B77D] font-medium">{usuarioLogado.nome.split(" ")[0]}</strong>
+              Olá, <strong className="text-[#E4B77D] font-medium">{usuarioLogado?.nome?.split(" ")[0] ?? ""}</strong>
             </span>
 
             <Link
