@@ -17,7 +17,10 @@ export default class AutenticacaoController {
     async usuario(req, res) {
         try {
             if(req.usuarioLogado) {
-                const { senha: _, ...usuarioSemSenha } = req.usuarioLogado;
+                const usuarioObj = typeof req.usuarioLogado.toJSON === 'function'
+                    ? req.usuarioLogado.toJSON()
+                    : { ...req.usuarioLogado };
+                const { senha: _, ...usuarioSemSenha } = usuarioObj;
                 return res.status(200).json(usuarioSemSenha);
             } else {
                 throw new Error("Erro ao obter o usuário!");
@@ -64,7 +67,10 @@ export default class AutenticacaoController {
                     );
                     const isProducao = process.env.NODE_ENV === 'production';
                     res.cookie("token", token, { httpOnly: true, secure: isProducao, sameSite: 'strict' });
-                    const { senha: _, ...usuarioSemSenha } = usuario;
+                    const usuarioObj = typeof usuario.toJSON === 'function'
+                        ? usuario.toJSON()
+                        : { ...usuario };
+                    const { senha: _, ...usuarioSemSenha } = usuarioObj;
                     return res.status(200).json({token: token, usuario: usuarioSemSenha});
                 }
                 else {
